@@ -1,0 +1,23 @@
+﻿{ "class": "GraphLinksModel",
+  "copiesKey": false,
+  "linkFromPortIdProperty": "fromPort",
+  "linkToPortIdProperty": "toPort",
+  "modelData": {"position":"-640.283332824707 -484.35465171725247"},
+  "nodeDataArray": [
+{"text":"Input", "figure":"Circle", "fill":"#00AD5F", "key":-1, "loc":"-130 10"},
+{"text":"Neuron", "key":-2, "loc":"-130 -100"},
+{"text":"Neuron", "key":-3, "loc":"0 -100"},
+{"text":"Output", "figure":"Output", "fill":"#CE0620", "key":-4, "loc":"120 -100"},
+{"text":"SigmoidActivator", "figure":"Value", "fill":"lightskyblue", "key":-5, "loc":"-200 -190"},
+{"text":"SigmoidActivator", "figure":"Value", "fill":"lightskyblue", "key":-6, "loc":"0 -190"},
+{"text":"IO:5:3", "figure":"Value", "fill":"lightskyblue", "key":-8, "loc":"0 -30"},
+{"text":"IO:3:5", "figure":"Value", "fill":"lightskyblue", "key":-9, "loc":"-370 -50"}
+ ],
+  "linkDataArray": [
+{"from":-1, "to":-2, "fromPort":"", "toPort":"", "points":[-130,-28.64534828274749,-130,-38.64534828274749,-130,-55.85225761934769,-130,-55.85225761934769,-130,-73.05916695594789,-130,-83.05916695594789]},
+{"from":-2, "to":-3, "fromPort":"R", "toPort":"L", "points":[-95.35833358764648,-100,-85.35833358764648,-100,-65,-100,-65,-100,-44.641666412353516,-100,-34.641666412353516,-100]},
+{"from":-3, "to":-4, "fromPort":"R", "toPort":"L", "points":[34.641666412353516,-100,44.641666412353516,-100,60.81666660308838,-100,60.81666660308838,-100,76.99166679382324,-100,86.99166679382324,-100]},
+{"from":-5, "to":-2, "fromPort":"", "toPort":"T", "points":[-200,-173.05916695594786,-200,-163.05916695594786,-200,-145,-130,-145,-130,-126.94083304405213,-130,-116.94083304405213]},
+{"from":-6, "to":-3, "fromPort":"B", "toPort":"T", "points":[0,-173.05916695594786,0,-163.05916695594786,0,-145,0,-145,0,-126.94083304405213,0,-116.94083304405213]},
+{"from":-8, "to":-3, "fromPort":"", "toPort":"", "points":[0,-46.94083304405213,0,-56.94083304405213,0,-65,0,-65,0,-73.05916695594789,0,-83.05916695594789]}
+ ]}
