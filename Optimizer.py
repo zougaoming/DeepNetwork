@@ -63,18 +63,18 @@ class AdaGradOptimizer:#ok
 		setattr(self.param, upBias, eval('self.param.' + upBias) - rate * dbias / (np.sqrt(b1) + 1e-10))
 		return w1, w2,w3, b1, b2,b3, t
 
-class RMSPropOptimizer:
+class RMSPropOptimizer:#ok
 	def __init__(self, param):
 		self.param = param
 
 	def Update(self, dw, upW, dbias, upBias, w1=None, w2=None, w3=None,b1=None,b2=None,b3=None,t=None):
 		rate = eval('self.param.rate')
 		decay_rate = 0.99
-		w1 = decay_rate * w1 + (1 - decay_rate) * (dw ** 2)
-		b1 = decay_rate * b1 + (1 - decay_rate) * (dbias ** 2)
+		w1 = decay_rate * w1 + (1 - decay_rate) * np.square(dw)
+		b1 = decay_rate * b1 + (1 - decay_rate) * np.square(dbias)
 
-		setattr(self.param, upW, eval('self.param.' + upW) - rate * dw / (np.sqrt(w1+ 1e-10)))
-		setattr(self.param, upBias, eval('self.param.' + upBias) - rate * dbias / (np.sqrt(b1+ 1e-10)))
+		setattr(self.param, upW, eval('self.param.' + upW) - rate * dw / (np.sqrt(w1)+ 1e-10))
+		setattr(self.param, upBias, eval('self.param.' + upBias) - rate * dbias / (np.sqrt(b1) + 1e-10))
 		return w1, w2,w3, b1, b2,b3, t
 
 class RMSPropWithNesterovMomentumOptimizer:

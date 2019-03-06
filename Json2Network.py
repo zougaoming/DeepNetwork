@@ -3,7 +3,7 @@
 import json
 from Gate import *
 from Optimizer import *
-from ActiveFunc import TanhActivator,softmax3,SigmoidActivator
+from ActiveFunc import *
 import numpy as np
 class Link:
 	def __init__(self,f,t,f2=0,Key=None,Value = None,inputsize=0,outputsize=0):
@@ -14,6 +14,8 @@ class Link:
 		self.f2 = f2
 		self.inputsize = inputsize#f_num
 		self.outputsize = outputsize#flite
+		self.channel_in = 0
+		self.channel_out = 0
 class JsonModel:
 	def __init__(self,param=None):
 		self.param = param
@@ -44,7 +46,7 @@ class JsonModel:
 		self.productLinker()
 		self.initParam()
 		self.productLayer()
-		for i in range(1):
+		for i in range(3):
 			self.orderGates()
 
 		for i in range(1):
@@ -83,14 +85,14 @@ class JsonModel:
 		for g in self.Gates:
 			if ('neuron' in g.Key):
 				for ws in self.WS:
-					if ws in g.Value:
+					if '"' + ws + '"' in g.Value:
 						value = 'np.random.uniform(-0.01, 0.01, size=('+ str(g.inputsize) +', '+ str(g.outputsize) +'))'
 						key = ws
 						#print(key,value)
 						setattr(self.param,key,eval(value))
 						break
 				for bias in self.BiasS:
-					if bias in g.Value:
+					if '"' + bias + '"' in g.Value:
 						#value = 'np.random.uniform(-0.01, 0.01, size=(' + str(g.outputsize) + ', 1))'
 						value = 'np.zeros((' + str(g.outputsize) + ', 1))'
 						key = bias
@@ -98,19 +100,20 @@ class JsonModel:
 						break
 			if('cnn' in g.Key):
 				for ws in self.WS:
-					if ws in g.Value:
-						value = 'np.random.uniform(-0.01, 0.01, size=(' + str(g.inputsize) + ', ' + str(
-							g.outputsize) + ',' + str(g.outputsize) + '))'
+					if '"' + ws + '"' in g.Value:
+						value = 'np.random.uniform(-0.01, 0.01, size=(' + str(g.channel_out) + ', ' + str(
+							g.channel_in) + ',' + str(g.outputsize) + ',' + str(g.outputsize) + '))'
 						key = ws
 						# print(key,value)
 						setattr(self.param, key, eval(value))
 						break
 				for bias in self.BiasS:
-					if bias in g.Value:
-						# value = 'np.random.uniform(-0.01, 0.01, size=(' + str(g.outputsize) + ', 1))'
-						value = 0
+					if '"' + bias + '"' in g.Value:
+						#value = 'np.random.uniform(-0.01, 0.01, size=(' + str(g.channel_out) + ', 1))'
+						value = 'np.zeros((' + str(g.channel_out) + ', ))'
+						#value = 0
 						key = bias
-						setattr(self.param, key, 0)
+						setattr(self.param, key, eval(value))
 						break
 
 		for db in self.DB:
@@ -399,6 +402,8 @@ class JsonModel:
 				activeFunc = None
 				outputsize = 0
 				inputsize = 0
+				channel_in = '1'
+				channel_out = '1'
 				for v in Values:
 					if 'Activator' in v['text']:
 						activeFunc = v['text'] + '()'
@@ -412,14 +417,21 @@ class JsonModel:
 						S = (tmp[2])
 						P = (tmp[3])
 						N = (tmp[4])
+					elif 'CHANNEL' == (v['text'])[:7]:
+						tmp = v['text'].split(':', 2)
+						channel_in = (tmp[1])
+						channel_out = tmp[2]
 				if activeFunc == None and hasattr(self.param, 'ActiveFunc'):
 					activeFunc = self.param.ActiveFunc
-				if inputsize == 0:
+				if inputsize == 0 and hasattr(self.param,'w_input'):
 					inputsize = self.param.w_input
-				if outputsize == 0:
+				if outputsize == 0 and hasattr(self.param,'w_output'):
 					outputsize = self.param.w_output
-				s = 'CNNGate(T.Gate,Input="' + Input + '",W="' + w + '",bias="' + bias + '",o="' + o + '",activeFunc=' + activeFunc + ',fliters='+F+',step='+ S +',padding='+P+',F_num='+ N +')'
-				l = Link(upNodes[0], key, 0, 'cnnGate' + bz, s,inputsize=inputsize, outputsize=outputsize)
+				s = 'CNNGate(T.Gate,Input="' + Input + '",W="' + w + '",bias="' + bias + '",o="' + o + '",activeFunc=' + activeFunc + ',fliters='+F+',step='+ S +',padding='+P+\
+					',channel_in='+ channel_in +',channel_out=' + channel_out + ')'
+				l = Link(upNodes[0], key, 0, 'cnnGate' + bz, s,inputsize=N, outputsize=F)
+				l.channel_in = channel_in
+				l.channel_out = channel_out
 				self.Gates.append(l)
 				self.WS.append(w)
 				self.BiasS.append(bias)
@@ -448,6 +460,19 @@ class JsonModel:
 				l = Link(upNodes[0], key, 0, 'poolGate' + bz, s)
 				self.Gates.append(l)
 
+			elif text.lower() == 'flatten':
+				upNodes = self.getInputNodeKey(key)
+				Input = 'o' + self.key2bz(upNodes[0])
+				Values = self.getValue(key)
+				activeFunc = None
+				for v in Values:
+					if 'Activator' in v['text']:
+						activeFunc = v['text'] + '()'
+				if activeFunc == None and hasattr(self.param, 'ActiveFunc'):
+					activeFunc = self.param.ActiveFunc
+				s = 'FlattenGate(T.Gate, Input="' + Input + '",o="' + o + '")'
+				l = Link(upNodes[0], key, 0, 'flattenGate' + bz, s)
+				self.Gates.append(l)
 			elif node['figure'] != 'Value' and node['figure'] != 'Database' and node['figure'] != 'Output':
 				upNodes = self.getInputNodeKey(key)
 				Input = 'o' + self.key2bz(upNodes[0])

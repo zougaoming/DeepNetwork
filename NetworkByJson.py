@@ -1,5 +1,6 @@
-from ActiveFunc import TanhActivator,softmax3,SigmoidActivator
-from Gate import NeuronGate,AddGate,MulGate,InOutGate,ConcateGate,CopyGate,Gate
+from ActiveFunc import *
+from Gate import *
+from Loss import *
 from Json2Network import JsonModel
 from Optimizer import *
 import numpy as np
@@ -13,7 +14,7 @@ class Param:
 		self.rate = rate
 		self.ActiveFunc = ActiveFunc
 		if Optimizer is None:
-			self.Optimizer = SGDandMomentumOptimizer(self)
+			self.Optimizer = SGDOptimizer(self)
 		else:
 			self.Optimizer = Optimizer
 class Network:
@@ -34,12 +35,18 @@ class Network:
 
 		for g in self.Gates:  # forward
 			str = 'self.' + g.Key + '.forward()'
+			print(str)
 			eval(str)
 
+		result = []
 		for db in self.jsonModel.Output:  # toDB
 			value = 'self.o' + self.jsonModel.key2bz(db['key'])
 			key = db['text']
+			k = key,eval(value)
+			result.append(k)
 			setattr(self, key, eval(value))
+
+		return result
 
 	def backward(self):
 		for output in self.jsonModel.Output:  # fromDB
@@ -49,16 +56,22 @@ class Network:
 
 		#self.Gate.printGateTimes()
 		self.Gate.runBackward()  # backward
-
+		result = []
 		for db in self.jsonModel.DB:  # toDB
 			value = 'self.do' + self.jsonModel.key2bz(db['key'])
 			key = 'd' + db['text']
+			k = key, eval(value)
+			result.append(k)
 			setattr(self, key, eval(value))
+		return result
 
 	def setOutputDelta(self, target):
 		#m = target.shape[0]
-		#print(m)
-		delta =  (-target + self.Output)
+		#delta = (-target + self.Output)
+		Loss = SquareLoss()
+		#print(Loss.loss(self.Output,target))
+		delta = Loss.backward(self.Output,target)
+		#delta = softmax3Activator().loss(target,self.Output)
 		self.dOutput = delta
 
 	# dropout函数的实现

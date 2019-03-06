@@ -30,9 +30,16 @@ if __name__ == '__main__':
 	network.param.w_3 = _w2_init
 	network.param.w_6 = _w3_init
 	for e in range(100):
-		print('-----------')
+		print('-----------',e)
 		network.forward(x.T)
 		t = network.Output
+
 		print(t)
 		network.setOutputDelta(y.T)
 		network.backward()
+		#print(network.param.dw_2)
+		#print(network.param.db_2)
+		#print(network.param.dw_3)
+		#print(network.param.db_3)
+		print(network.param.dw_6)
+		print(network.param.db_6)

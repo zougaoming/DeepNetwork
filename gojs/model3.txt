@@ -2,8 +2,8 @@
   "copiesKey": false,
   "linkFromPortIdProperty": "fromPort",
   "linkToPortIdProperty": "toPort",
-  "modelData": {"position":"-560 -317"},
-  "nodeDataArray": [ 
+  "modelData": {"position":"-557 -309"},
+  "nodeDataArray": [
 {"text":"Input", "figure":"Circle", "fill":"#00AD5F", "key":-1, "loc":"-270 0"},
 {"text":"Neuron", "key":-2, "loc":"-100 0"},
 {"text":"Neuron", "key":-3, "loc":"70 0"},
@@ -15,13 +15,15 @@
 {"text":"IO:4:4", "figure":"Value", "fill":"lightskyblue", "key":-12, "loc":"50 -80"},
 {"text":"Rate:0.05", "figure":"Value", "fill":"lightskyblue", "key":-13, "loc":"-320 230"},
 {"text":"TanhActivator", "figure":"Value", "fill":"lightskyblue", "key":-14, "loc":"-340 -180"},
-{"text":"SGDOptimizer", "figure":"Value", "fill":"lightskyblue", "key":-15, "loc":"-340 -120"},
-{"text":"Dropout:0", "figure":"Value", "fill":"lightskyblue", "key":-16, "loc":"-350 -70"}
+{"text":"RMSPropOptimizer", "figure":"Value", "fill":"lightskyblue", "key":-15, "loc":"-340 -120"},
+{"text":"Dropout:0", "figure":"Value", "fill":"lightskyblue", "key":-16, "loc":"-350 -70"},
+{"text":"TanhActivator", "figure":"Value", "fill":"lightskyblue", "key":-17, "loc":"200 100"}
  ],
-  "linkDataArray": [ 
+  "linkDataArray": [
 {"from":-1, "to":-2, "fromPort":"R", "toPort":"L", "points":[-231.3546517172525,0,-221.3546517172525,0,-182.99815906480302,0,-182.99815906480302,0,-144.64166641235352,0,-134.64166641235352,0]},
 {"from":-2, "to":-3, "fromPort":"R", "toPort":"L", "points":[-65.35833358764648,0,-55.358333587646484,0,-15,0,-15,0,25.358333587646484,0,35.358333587646484,0]},
 {"from":-3, "to":-6, "fromPort":"R", "toPort":"L", "points":[104.64166641235352,0,114.64166641235352,0,135,0,135,0,155.35833358764648,0,165.35833358764648,0]},
 {"from":-6, "to":-5, "fromPort":"R", "toPort":"L", "points":[234.64166641235352,0,244.64166641235352,0,255.81666660308838,0,255.81666660308838,0,266.99166679382324,0,276.99166679382324,0]},
-{"from":-11, "to":-2, "fromPort":"", "toPort":"T", "points":[-100,-63.059166955947866,-100,-53.059166955947866,-100,-39.99999999999999,-100,-39.99999999999999,-100,-26.940833044052123,-100,-16.940833044052123]}
+{"from":-11, "to":-2, "fromPort":"", "toPort":"T", "points":[-100,-63.059166955947866,-100,-53.059166955947866,-100,-39.99999999999999,-100,-39.99999999999999,-100,-26.940833044052123,-100,-16.940833044052123]},
+{"from":-17, "to":-6, "fromPort":"", "toPort":"", "points":[200,83.05916695594787,200,73.05916695594787,200,50,200,50,200,26.940833044052123,200,16.940833044052123]}
  ]}
