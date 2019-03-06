@@ -87,7 +87,7 @@ class NeuronGate(Gate):
 	def backward(self):
 		dz = eval(self.dz)
 		if self.activeFunc is not None:
-			dz = self.activeFunc.backward(self._output) * dz
+				dz = self.activeFunc.backward(dz)
 		dw = np.asarray(np.dot(dz, eval(self.Input).T)).T
 		dx = np.dot(eval(self.W), dz)
 		dbias = dz
@@ -239,8 +239,38 @@ class CopyGate(Gate):
 		else:
 			setattr(self.T, self.doutput, eval(self.dz) + eval('self.T.' + self.doutput))
 
+class FlattenGate(Gate):
+	def __init__(self, P, Input=None, o=None):
+		self.P = P
+		self.T = self.P.T
+		self.Input = 'self.T.' + Input
+		self.dz = 'self.T.d' + o
+		self.o = o
+		self.doutput = 'd' + Input
+
+		self.H = 0
+		self.W = 0
+		self.input_dim = 0
+	def forward(self):
+		self.input = eval(self.Input)
+		l = 1
+		for s in self.input.shape[1:]:
+			l = l * s
+		out = np.zeros((l,self.input.shape[0]))
+		for n in range(self.input.shape[0]):
+			out[:,n] = self.input[n].flatten()
+		self._output = out
+		setattr(self.T, self.o, self._output)
+		self.P.updateGateTimes(self)
+
+	def backward(self):
+		dz = eval(self.dz)
+		dinput = dz.reshape(self.input.shape)
+		setattr(self.T, self.doutput, dinput)
+
+
 class CNNGate(Gate):
-	def __init__(self, P, Input=None,W=None,bias=None,o=None,activeFunc = None,fliters=3,step = 1,padding = 0,F_num = 1):
+	def __init__(self, P, Input=None,W=None,bias=None,o=None,activeFunc = None,fliters=3,step = 1,padding = 0,channel_in = 1,channel_out = 1):
 		self.P = P
 		self.TZ = self.P.T
 		self.Input = 'self.TZ.' + Input
@@ -259,7 +289,8 @@ class CNNGate(Gate):
 		self.fliters = fliters
 		self.step = step
 		self.padding = padding
-		self.FNum = F_num
+		self.channel_in = channel_in
+		self.channel_out = channel_out
 
 		self.w1 = np.zeros_like(eval(self.W))
 		self.w2 = np.zeros_like(self.w1)
@@ -291,55 +322,76 @@ class CNNGate(Gate):
 				result[h][w] = np.multiply(i_a,weight).sum()  # self.calc_connv(i_a,weight)#np.multiply(i_a,weight).sum()#self.calc_connv(i_a,weight)
 		return result
 
+	def expand_sensitivity_map_tride1(self, sensitivity_array):
+		depth = sensitivity_array.shape[0]
+		# 确定扩展后sensitivity map的大小
+		# 计算stride为1时sensitivity map的大小
+		expanded_width = (self.inputW -
+						  self.fliters + 2 * self.padding + 1)
+		expanded_height = (self.inputH -
+						   self.fliters + 2 * self.padding + 1)
+		# 构建新的sensitivity_map
+		expand_array_tride1 = np.zeros((depth, expanded_height,
+								 expanded_width))
+		# 从原始sensitivity map拷贝误差值
+		for i in range(self.output_height):
+			for j in range(self.output_width):
+				i_pos = i * self.stride
+				j_pos = j * self.stride
+				expand_array_tride1[:, i_pos, j_pos] = sensitivity_array[:, i, j]
+		return expand_array_tride1
+
+	def create_delta_array(self):
+		return np.zeros_like(self.paddedInput)
+
 	def forward(self):
 		input = eval(self.Input)
 		w = eval(self.W)
 		b = eval(self.bias)
-
-		inputW = input.shape[1]
-		inputH = input.shape[0]
+		inputW = input.shape[-1]
+		inputH = input.shape[input.ndim - 1]
 		self.inputW = inputW
 		self.inputH = inputH
 		outputW = int(self.getOutputSize(inputW, self.step, self.fliters, self.padding))
 		outputH = int(self.getOutputSize(inputH, self.step, self.fliters, self.padding))
-		self._output = np.zeros((self.FNum,outputW,outputH))
+		self._output = np.zeros((self.channel_out, outputW, outputH))
 		input = self.paddingZeros(input, self.padding)
+		self.paddedInput = input
 
-		for f in range(self.FNum):
-			self._output[f] = self.conv(input, w[f], outputW, outputH, self.step)
-			for i in range(outputW):
-				for j in range(outputH):
-					self._output[f][i][j] = self.activeFunc.forward(self._output[f][i][j] + b)
-
+		nw = w#.transpose(3, 2, 0, 1)
+		wn, wc, wh, ww = np.shape(nw)
+		from Batch2ConvMatrix import Batch2ConvMatrix
+		self.b2m = Batch2ConvMatrix(self.step, wh, ww)
+		x2m = self.b2m(self.paddedInput)
+		w2m = nw.reshape(wn, -1)
+		xn, xc, oh, ow = self.b2m.conv_size
+		out_matrix = np.matmul(x2m, w2m.T) + b
+		out = out_matrix.reshape((xn, oh, ow, wn))
+		self.x2m = x2m
+		self.w2m = w2m
+		out = out.transpose((0, 3, 1, 2))
+		self._output = self.activeFunc.forward(out)
 		setattr(self.TZ, self.o, self._output)
 		self.P.updateGateTimes(self)
+		return out
+
 	def backward(self):
-		input = eval(self.Input)
 		dz = eval(self.dz)
 		w = eval(self.W)
-
-		dw = np.zeros_like(w)
-		dx = np.zeros_like(input)
-		for f in range(self.FNum):
-			if self.activeFunc is not None:
-				dz[f] = self.activeFunc.backward(self._output[f]) * dz[f]
-			downdelta = dz[f]
-			dw[f] = self.conv(input,downdelta,self.fliters,self.fliters,self.step)
-
-			newDelta = self.paddingZeros(downdelta, 2)##############2?
-			tmp_w = np.rot90(w[f], 2)
-			p = self.conv(newDelta, tmp_w, self.inputW, self.inputH, self.step)
-			a = np.zeros_like(input)
-			for i in range(input.shape[0]):
-				for j in range(input.shape[1]):
-					a[i][j] = self.activeFunc.backward(input[i][j])
-			dx = p * input
-		dbias = dz.sum()
+		dz = self.activeFunc.backward(dz)
+		on, oc, oh, ow = np.shape(dz)
+		dz = dz.transpose((0, 2, 3, 1))
+		dz = dz.reshape((on * oh * ow, -1))
+		dw = np.matmul(dz.T, self.x2m)
+		dw = dw.reshape(np.shape(w))
+		dbias = np.sum(dz, axis=0)
+		dx2m = np.matmul(dz, self.w2m)
+		dx = self.b2m.backward(dx2m)
 		setattr(self.TZ.param, self.dbias, dbias)
 		setattr(self.TZ.param, self.dw, dw)
 		setattr(self.TZ, self.dInput, dx)
+		self.update(dw, dbias)
 
-		self.update(dw,dbias)
 	def update(self, dw, dbias):
 		self.w1, self.w2, self.w3, self.b1, self.b2, self.b3, self.adam_t, = self.TZ.param.Optimizer.Update(dw,
 																												self.upW,
@@ -378,7 +430,7 @@ class PoolGate(Gate):
 	def getOutputSize(self, M, S, F):
 		return (M - F ) / S + 1
 
-	def calc_pool(self, input, type, index, f=0):
+	def calc_pool(self, input, type, index, f=0,c = 0):
 		result = .0
 		if type == 'MAX':
 			max = input[0, 0]
@@ -386,8 +438,8 @@ class PoolGate(Gate):
 				for j in range(input.shape[1]):
 					if input[i, j] > max:
 						max = input[i, j]
-						self.bz_x[f][index] = i
-						self.bz_y[f][index] = j
+						self.bz_x[f][c][index] = i
+						self.bz_y[f][c][index] = j
 
 			result = max
 		elif type == 'AVERAGE':
@@ -402,21 +454,23 @@ class PoolGate(Gate):
 		input = eval(self.Input)
 
 		self.FNum = input.shape[0]
-		inputW = input.shape[2]
-		inputH = input.shape[1]
+		self.channel = input.shape[1]
+		inputW = input.shape[3]
+		inputH = input.shape[2]
 		self.outputW = int(self.getOutputSize(inputW, self.step, self.fliters))
 		self.outputH = int(self.getOutputSize(inputH, self.step, self.fliters))
-		self._output = np.zeros((self.FNum, self.outputH, self.outputW))
-		self.bz_x = np.zeros((self.FNum, self.outputW * self.outputH))
-		self.bz_y = np.zeros((self.FNum, self.outputW * self.outputH))
+		self._output = np.zeros((self.FNum, self.channel,self.outputH, self.outputW))
+		self.bz_x = np.zeros((self.FNum, self.channel,self.outputW * self.outputH))
+		self.bz_y = np.zeros((self.FNum, self.channel,self.outputW * self.outputH))
 		for f in range(self.FNum):
-			index = 0
-			for h in range(self.outputH):
-				for w in range(self.outputW):
-					i_a = input[f][h * self.step:h * self.step + self.fliters,
-							w * self.step:w * self.step + self.fliters]
-					self._output[f][h][w] = self.calc_pool(i_a, self.type, index, f)
-					index += 1
+			for c in range(self.channel):
+				index = 0
+				for h in range(self.outputH):
+					for w in range(self.outputW):
+						i_a = input[f][c][h * self.step:h * self.step + self.fliters,
+								w * self.step:w * self.step + self.fliters]
+						self._output[f][c][h][w] = self.calc_pool(i_a, self.type, index, f,c)
+						index += 1
 		setattr(self.TZ, self.o, self._output)
 		self.P.updateGateTimes(self)
 	def backward(self):
@@ -424,22 +478,23 @@ class PoolGate(Gate):
 		dz = eval(self.dz)
 		result = np.zeros((input.shape))
 		for f in range(self.FNum):
-			if self.type == 'MAX':
-				index = 0
-				for i in range(self.outputW):
-					for j in range(self.outputH):
-						x = int(i * self.step + self.bz_x[f][index])
-						y = int(j * self.step + self.bz_y[f][index])
-						result[f][x][y] = dz[f][i][j]
-						index += 1
+			for c in range(self.channel):
+				if self.type == 'MAX':
+					index = 0
+					for i in range(self.outputW):
+						for j in range(self.outputH):
+							x = int(i * self.step + self.bz_x[f][c][index])
+							y = int(j * self.step + self.bz_y[f][c][index])
+							result[f][c][x][y] = dz[f][c][i][j]
+							index += 1
 
-			elif self.type == 'AVERAGE':
-				for i in range(self.outputW):
-					for j in range(self.outputH):
-						pool_size = self.step * self.step
-						for m in range(self.step):
-							for n in range(self.step):
-								result[f][i * self.step + m][j * self.step + n] = dz[f][i][j] / pool_size
+				elif self.type == 'AVERAGE':
+					for i in range(self.outputW):
+						for j in range(self.outputH):
+							pool_size = self.step * self.step
+							for m in range(self.step):
+								for n in range(self.step):
+									result[f][c][i * self.step + m][j * self.step + n] = dz[f][c][i][j] / pool_size
 		#result = result *
 		setattr(self.TZ, self.dInput, result)
 
