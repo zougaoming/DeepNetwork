@@ -24,10 +24,6 @@ class Gate:
 		self.Gates.append(g)
 		self.start_i += 1
 
-
-# str = 'NeuronGate(self).backward'
-# self.P.updateGateTimes(str,activeFunc)
-
 class AddGate(Gate):
 	def __init__(self,P,Input1=None,Input2=None,o=None):
 		self.P = P
@@ -47,7 +43,6 @@ class AddGate(Gate):
 		doutput2 = eval(self.dz) * np.ones_like(eval(self.Input2))
 		setattr(self.T,self.doutput1,doutput1)
 		setattr(self.T,self.doutput2,doutput2)
-
 
 class NeuronGate(Gate):
 	def __init__(self,P,Input=None,W=None,bias=None,o=None,activeFunc = None):
@@ -80,73 +75,42 @@ class NeuronGate(Gate):
 
 		self._output = np.dot(w,i) + b#eval('np.dot('+ self.W + '.T,' + i + ') + ' + self.bias)
 		if self.activeFunc is not None:
-			self._output = self.activeFunc.forward(self._output)
+			if 'SoftmaxActivator' == self.activeFunc.__class__.__name__  and self._output.shape[1] > 1:
+				for n in range(self._output.shape[1]):
+					self._output[:,n] = self.activeFunc.forward(self._output[:,n])
+			else:
+				self._output = self.activeFunc.forward(self._output)
 		setattr(self.TZ,self.o,self._output)
 		self.P.updateGateTimes(self)
 
 	def backward(self):
 		dz = eval(self.dz)
 		if self.activeFunc is not None:
+			if 'SoftmaxActivator' == self.activeFunc.__class__.__name__ and self._output.shape[1] > 1:
+				for n in range(self._output.shape[1]):
+					dz[:,n] = self.activeFunc.backward2(self._output[:,n],dz[:,n])
+			else:
 				dz = self.activeFunc.backward(dz)
+
 		dw = np.asarray(np.dot(dz, eval(self.Input).T)).T
 		dx = np.dot(eval(self.W), dz)
-		dbias = dz
-		setattr(self.TZ.param,self.dbias,dz)
+		if dz.shape[1] > 1:# N > 1
+			b = eval(self.bias)
+			dbias = np.zeros_like(b)
+			for n in range(dz.shape[1]):
+				tmp = dz[:,n]
+				tmp = tmp.reshape(-1,1)
+				dbias += tmp
+		else:
+			dbias = dz
+		setattr(self.TZ.param,self.dbias,dbias)
 		setattr(self.TZ.param,self.dw,dw)
 		setattr(self.TZ,self.dInput,dx)
-
+		#print('dw->',dw)
 		self.update(dw,dbias)
 		#return dw,dx
 	def update(self,dw,dbias):
 		self.w1, self.w2, self.w3,self.b1, self.b2,self.b3,self.adam_t, = self.TZ.param.Optimizer.Update(dw,self.upW,dbias,self.upBias,self.w1,self.w2,self.w3,self.b1,self.b2,self.b3,self.adam_t)
-
-
-		#SGD
-		#setattr(self.TZ.param,self.upW,eval(self.W)-rate* dw.T)
-		#setattr(self.TZ.param, self.upBias, eval(self.bias) - rate * dbias)
-
-		#SGD+Momentum
-		#rho = 0.01
-		#self.vx = rho * self.vx + dw
-		#self.vb = rho * self.vb + dbias
-		#setattr(self.TZ.param,self.upW,eval(self.W)-rate* self.vx.T)
-		#setattr(self.TZ.param, self.upBias, eval(self.bias) - rate * self.vb)
-
-		#AdaGrad
-		#self.grad_squared_w += dw ** 2
-		#self.grad_squared_b += dbias ** 2
-		#setattr(self.TZ.param, self.upW, eval(self.W) - rate * dw.T / (np.sqrt(self.grad_squared_w.T)+ 1e-8))
-		#setattr(self.TZ.param, self.upBias, eval(self.bias) - rate * dbias/(np.sqrt(self.grad_squared_b)+ 1e-8))
-
-
-		#RMSProp
-		#decay_rate = 0.9
-		#dw = ddw.T
-		#self.grad_squared_w = decay_rate * self.grad_squared_w + (1 - decay_rate) * dw ** 2
-		#self.grad_squared_b = decay_rate * self.grad_squared_b + (1 - decay_rate) * dbias ** 2
-		#setattr(self.TZ.param, self.upW, eval(self.W) - rate * dw / (np.sqrt(self.grad_squared_w) + 1e-8))
-		#setattr(self.TZ.param, self.upBias, eval(self.bias) - rate * dbias / (np.sqrt(self.grad_squared_b) + 1e-8))
-
-		#Adam
-		#beta1 = 0.9
-		#beta2 = 0.999
-		#dw = dw.T
-		#self.adam_t += 1
-		#self.adam_m = beta1 * self.adam_m + (1 - beta1) * dw
-		#self.adam_v = beta2 * self.adam_v + (1 - beta2) * (dw ** 2)
-		#mb = self.adam_m / (1 - beta1 ** self.adam_t)
-		#vb = self.adam_v / (1 - beta2 ** self.adam_t)
-		#setattr(self.TZ.param, self.upW, eval(self.W) - rate * mb / (np.sqrt(vb) + 1e-8))
-
-		#self.adam_bm = beta1 * self.adam_bm + (1 - beta1) * dbias
-		#self.adam_bv = beta2 * self.adam_bv + (1 - beta2) * (dbias ** 2)
-		#mb = self.adam_bm / (1 - beta1 ** self.adam_t)
-		#vb = self.adam_bv / (1 - beta2 ** self.adam_t)
-		#setattr(self.TZ.param, self.upBias, eval(self.bias) - rate * mb / (np.sqrt(vb) + 1e-8))
-
-
-
-
 
 class MulGate(Gate):
 	def __init__(self,P,Input1=None,Input2=None,o=None):
@@ -169,7 +133,6 @@ class MulGate(Gate):
 		setattr(self.T,self.dinput1,dinput1)
 		setattr(self.T, self.dinput2, dinput2)
 
-
 class InOutGate(Gate):
 	def __init__(self,P,Input=None,o=None,activeFunc = None):
 		self.P = P
@@ -178,7 +141,6 @@ class InOutGate(Gate):
 		self.dz = 'self.T.d' +o
 		self.o = o
 		self.activeFunc = activeFunc
-
 		self.dInput = 'd' + Input
 	def forward(self):
 		if self.activeFunc is not None:
@@ -203,7 +165,6 @@ class ConcateGate(Gate):
 		self.Input2 = 'self.T.' + Input2
 		self.dz = 'self.T.d' + o
 		self.o = o
-
 		self.doutput2 = 'd' + Input2
 		self.doutput1 = 'd' + Input1
 
@@ -267,7 +228,6 @@ class FlattenGate(Gate):
 		dz = eval(self.dz)
 		dinput = dz.reshape(self.input.shape)
 		setattr(self.T, self.doutput, dinput)
-
 
 class CNNGate(Gate):
 	def __init__(self, P, Input=None,W=None,bias=None,o=None,activeFunc = None,fliters=3,step = 1,padding = 0,channel_in = 1,channel_out = 1):
@@ -408,8 +368,6 @@ class CNNGate(Gate):
 		#setattr(self.TZ.param, self.upW, eval('self.TZ.param.' + self.upW) - 0.05 * dw)
 		#setattr(self.TZ.param, self.upBias, eval('self.TZ.param.' + self.upBias) - 0.05 * dbias)
 
-
-
 class PoolGate(Gate):
 	def __init__(self, P, Input=None,W=None,bias=None,o=None,activeFunc = None,fliters=2,step = 1,padding=0,F_num = 1,type='MAX'):
 		self.P = P
@@ -497,5 +455,3 @@ class PoolGate(Gate):
 									result[f][c][i * self.step + m][j * self.step + n] = dz[f][c][i][j] / pool_size
 		#result = result *
 		setattr(self.TZ, self.dInput, result)
-
-

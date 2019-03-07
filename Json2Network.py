@@ -94,7 +94,7 @@ class JsonModel:
 				for bias in self.BiasS:
 					if '"' + bias + '"' in g.Value:
 						#value = 'np.random.uniform(-0.01, 0.01, size=(' + str(g.outputsize) + ', 1))'
-						value = 'np.zeros((' + str(g.outputsize) + ', 1))'
+						value = 'np.zeros((' + str(g.outputsize) + ',1 ))'
 						key = bias
 						setattr(self.param, key, eval(value))
 						break
@@ -463,13 +463,6 @@ class JsonModel:
 			elif text.lower() == 'flatten':
 				upNodes = self.getInputNodeKey(key)
 				Input = 'o' + self.key2bz(upNodes[0])
-				Values = self.getValue(key)
-				activeFunc = None
-				for v in Values:
-					if 'Activator' in v['text']:
-						activeFunc = v['text'] + '()'
-				if activeFunc == None and hasattr(self.param, 'ActiveFunc'):
-					activeFunc = self.param.ActiveFunc
 				s = 'FlattenGate(T.Gate, Input="' + Input + '",o="' + o + '")'
 				l = Link(upNodes[0], key, 0, 'flattenGate' + bz, s)
 				self.Gates.append(l)

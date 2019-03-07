@@ -56,6 +56,14 @@ class SoftmaxActivator:#ok
 		dnx = np.sum(grad * dz,axis=1)
 		return dnx
 
+	def backward2(self, output,dz):
+		grad = output[:, np.newaxis] * output[np.newaxis, :]
+		for i in range(len(grad)):
+			grad[i, i] -= output[i]
+		grad = -grad
+		dnx = np.sum(grad * dz, axis=1)
+		return dnx
+
 class LogSoftmaxActivator:
 	def forward(self, nx):#ok
 		self.nx = nx
