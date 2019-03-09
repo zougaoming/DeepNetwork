@@ -101,7 +101,7 @@ class AdamOptimizer:#ok
 	def Update(self, dw, upW, dbias, upBias, w1=None, w2=None, w3=None,b1=None,b2=None,b3=None,t=None):
 		rate = eval('self.param.rate')
 		beta1 = 0.9
-		beta2 = 0.999
+		beta2 = 0.99
 		t += 1
 		w1 = beta1 * w1 + (1 - beta1) * dw
 		w2 = beta2 * w2 + (1 - beta2) * (dw ** 2)
@@ -115,8 +115,8 @@ class AdamOptimizer:#ok
 		vb2 = b2 / (1 - beta2 ** t)
 		# setattr(self.TZ.param, self.upBias, eval(self.bias) - rate * mb / (np.sqrt(vb) + 1e-8))
 
-		setattr(self.param, upW, eval('self.param.' + upW) - rate * mb / (np.sqrt(vb)+ 1e-8))
-		setattr(self.param, upBias, eval('self.param.' + upBias) - rate * mb2 / (np.sqrt(vb2)+ 1e-8))
+		setattr(self.param, upW, eval('self.param.' + upW) - rate * mb / (np.sqrt(vb)+ 1e-10))
+		setattr(self.param, upBias, eval('self.param.' + upBias) - rate * mb2 / (np.sqrt(vb2)+ 1e-10))
 		return w1, w2,w3, b1, b2,b3, t
 
 
@@ -126,7 +126,7 @@ class AdadeltaOptimizer:#ok
 
 	def Update(self, dw, upW, dbias, upBias, w1=None, w2=None, w3=None,b1=None,b2=None,b3=None,t=None):
 		rate = eval('self.param.rate')
-		rate = 0.001
+		#rate = 0.001
 		rho = 0.95
 		epsilon = 1e-10
 		w1 = rho * w1 + (1-rho) * (dw**2)

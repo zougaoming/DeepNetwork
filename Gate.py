@@ -214,11 +214,12 @@ class FlattenGate(Gate):
 		self.input_dim = 0
 	def forward(self):
 		self.input = eval(self.Input)
+		self.N = self.input.shape[0]
 		l = 1
 		for s in self.input.shape[1:]:
 			l = l * s
-		out = np.zeros((l,self.input.shape[0]))
-		for n in range(self.input.shape[0]):
+		out = np.zeros((l,self.N))
+		for n in range(self.N):
 			out[:,n] = self.input[n].flatten()
 		self._output = out
 		setattr(self.T, self.o, self._output)
@@ -226,8 +227,12 @@ class FlattenGate(Gate):
 
 	def backward(self):
 		dz = eval(self.dz)
-		dinput = dz.reshape(self.input.shape)
-		setattr(self.T, self.doutput, dinput)
+		dinput = dz.reshape(-1,self.N)
+		out = np.zeros_like(self.input)
+		for n in range(self.N):
+			out[n] = dinput[:,n].reshape(self.input.shape[1],self.input.shape[2],self.input.shape[3])
+
+		setattr(self.T, self.doutput, out)
 
 class CNNGate(Gate):
 	def __init__(self, P, Input=None,W=None,bias=None,o=None,activeFunc = None,fliters=3,step = 1,padding = 0,channel_in = 1,channel_out = 1):

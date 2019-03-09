@@ -299,6 +299,8 @@ class JsonModel:
 						setattr(self.param, 'Optimizer', eval(text + '(self.param)'))
 					elif 'Dropout:' == text[0:8]:
 						setattr(self.param, 'keepDropout', float(text[8:]))
+					elif 'Loss:' in text:
+						setattr(self.param, 'Loss', eval(text + '()'))
 	def productLayer(self):
 		for node in self.jsonNode:
 			text = node['text']

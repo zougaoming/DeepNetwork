@@ -2,7 +2,7 @@
   "copiesKey": false,
   "linkFromPortIdProperty": "fromPort",
   "linkToPortIdProperty": "toPort",
-  "modelData": {"position":"-191.6333351135254 -244"},
+  "modelData": {"position":"-221.99166679382324 -245"},
   "nodeDataArray": [
 {"text":"cnn", "key":-1, "loc":"0 20"},
 {"text":"Input", "figure":"Circle", "fill":"#00AD5F", "key":-2, "loc":"-120 20"},
@@ -27,9 +27,11 @@
 {"text":"IO:120:84", "figure":"Value", "fill":"lightskyblue", "key":-22, "loc":"670 100"},
 {"text":"IO:84:10", "figure":"Value", "fill":"lightskyblue", "key":-23, "loc":"780 100"},
 {"text":"IdentityActivator", "figure":"Value", "fill":"lightskyblue", "key":-24, "loc":"740 -140"},
-{"text":"Rate:0.05", "figure":"Value", "fill":"lightskyblue", "key":-25, "loc":"100 240"},
+{"text":"Rate:0.1", "figure":"Value", "fill":"lightskyblue", "key":-25, "loc":"100 240"},
 {"text":"CHANNEL:1:6", "figure":"Value", "fill":"lightskyblue", "key":-26, "loc":"40 160"},
-{"text":"CHANNEL:6:16", "figure":"Value", "fill":"lightskyblue", "key":-27, "loc":"240 160"}
+{"text":"CHANNEL:6:16", "figure":"Value", "fill":"lightskyblue", "key":-27, "loc":"240 160"},
+{"text":"SGDOptimizer", "figure":"Value", "fill":"lightskyblue", "key":-28, "loc":"280 -190"},
+{"text":"SolfmaxEntropyLoss", "figure":"Value", "fill":"lightskyblue", "key":-29, "loc":"490 290"}
  ],
   "linkDataArray": [
 {"from":-2, "to":-1, "fromPort":"R", "toPort":"L", "points":[-81.35465171725247,20,-71.35465171725247,20,-51.68982566789137,20,-51.68982566789137,20,-32.02499961853027,20,-22.024999618530273,20]},

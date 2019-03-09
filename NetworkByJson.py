@@ -6,19 +6,24 @@ from Optimizer import *
 import numpy as np
 
 class Param:
-	def __init__(self,ModelFile,inputsize=0,outputsize=0,keepDropout=0,Optimizer=None,rate=0.05,ActiveFunc=None):
+	def __init__(self,ModelFile,inputsize=0,outputsize=0,keepDropout=0,Optimizer=None,Loss=None,rate=0.05,ActiveFunc=None):
 		self.ModelFile = ModelFile
 		self.keepDropout = keepDropout
 		self.inputsize = inputsize
 		self.outputsize = outputsize
 		self.rate = rate
 		self.ActiveFunc = ActiveFunc
+		self.Loss = MSELoss() if Loss is None else Loss
 		if Optimizer is None:
 			self.Optimizer = SGDOptimizer(self)
 		else:
 			self.Optimizer = Optimizer
 class Network:
 	def __init__(self, param):
+		"""
+
+		:rtype: object
+		"""
 		self.param = param
 		self.jsonModel = JsonModel(self.param)
 		self.jsonModel.run()
@@ -35,7 +40,7 @@ class Network:
 
 		for g in self.Gates:  # forward
 			str = 'self.' + g.Key + '.forward()'
-			print(str)
+			#print(str)
 			eval(str)
 
 		result = []
@@ -68,9 +73,15 @@ class Network:
 	def setOutputDelta(self, target):
 		#m = target.shape[0]
 		#delta = (-target + self.Output)
-		Loss = SquareLoss()
-		#print(Loss.loss(self.Output,target))
-		delta = Loss.backward(self.Output,target)
+		delta = np.zeros_like(target)
+		Loss = self.param.Loss
+		s = 0
+		for n in range(target.shape[1]):
+			s += Loss.loss(self.Output[:,n], target[:,n])
+			delta[:,n] = Loss.backward(self.Output[:,n], target[:,n])
+		print(Loss.loss(self.Output, target))
+		#print(s/target.shape[1])
+		#delta = Loss.backward(self.Output, target)
 		#delta = softmax3Activator().loss(target,self.Output)
 		self.dOutput = delta
 
