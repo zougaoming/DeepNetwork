@@ -1,7 +1,8 @@
 #!/usr/bin/env Python
 # coding=utf-8
 import numpy as np
-from NetworkByJson import Param,Network
+
+import zouflow as zf
 
 if __name__ == '__main__':
 
@@ -23,8 +24,8 @@ if __name__ == '__main__':
 						 [.3, .6, .5, .1],
 						 [.4, .2, .3, .7]], dtype=np.float32)
 
-	param = Param('./gojs/model3.txt')
-	network = Network(param=param)
+	param = zf.Param('./gojs/model3.txt')
+	network = zf.Network(param=param)
 
 	network.param.w_2 = _w1_init
 	network.param.w_3 = _w2_init

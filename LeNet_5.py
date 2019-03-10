@@ -1,8 +1,9 @@
 #!/usr/bin/env Python
 # coding=utf-8
 import numpy as np
-from NetworkByJson import Param,Network
 from tensorflow.examples.tutorials.mnist import input_data
+
+from zouflow.NetworkByJson import Param,Network
 #from data.mnist.mnist import MNIST_DATA
 from sklearn.utils import shuffle
 
