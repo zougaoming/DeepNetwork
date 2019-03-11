@@ -16,7 +16,7 @@ class SquareLoss:#ok
 	def loss(self, output, target):
 		self.output = output
 		self.target = target
-		return np.square(self.output - self.target)
+		return np.mean(np.square(self.output - self.target))
 	def backward(self, output, target):
 		dx = 2 * (output - target)
 		return dx

@@ -1,14 +1,27 @@
 import numpy as np
+from .Batch2ConvMatrix import *
+class BackwardList:
+	def __init__(self):
+		self.Gates = []
+		self.Threads = []
+
+	def cleanGateTimes(self):
+		self.Gates.clear()
+
+	def run(self):
+		for g in self.Gates[::-1]:
+			g.backward()
+
+	def printGateTimes(self):
+		for g in self.Gates:
+			print(g)
+
+	def updateGateTimes(self, g):
+		self.Gates.append(g)
 
 class Gate(object):
-	'''
-	def __init__(self,Name,T):
-		self.Name = Name
-		self.start_i = 0
-		self.Gates = []
-		self.T = T
-	'''
-	def __init__(self,Name,Nework=None,Input='',Input1='',Input2='',o='',W='',bias='',activeFunc = None):
+	def init(self,g=None,Name='',Nework=None,Input='',Input1='',Input2='',o='',W='',bias='',activeFunc = None):
+		#print(Name)
 		self.Nework = Nework
 		self.param = self.Nework.param
 		self.Name = Name
@@ -27,32 +40,14 @@ class Gate(object):
 		self.dbias = 'd' + bias
 		self.upW = W
 		self.upBias = bias
+		if g is not None:self.Nework.backwardList.updateGateTimes(g)
 
-		self.Gates = []
-		self.start_i = 0
-
-	def cleanGateTimes(self):
-		self.Gates.clear()
-		self.start_i = 0
-	def runBackward(self):
-		for i in range(self.start_i-1,0,-1):
-			#print(i,self.start_i)
-			self.Gates[i].backward()
-		self.Gates.clear()
-		self.start_i = 0
-	def printGateTimes(self):
-		for g in self.Gates:
-			print(g)
-	def updateGateTimes(self,g):
-		self.Gates.append(g)
-		self.start_i += 1
 
 class AddGate(Gate):
 	def __init__(self,Network,Input1=None,Input2=None,o=None):
-		super(self.__class__, self).__init__('AddGate', Network,Input1=Input1, Input2=Input2, o = o)
+		super(self.__class__, self).init(self,'AddGate', Network,Input1=Input1, Input2=Input2, o = o)
 	def forward(self):
 		setattr(self.Nework, self.o, eval(self.Input1 + '+' + self.Input2))
-		self.Nework.Gate.updateGateTimes(self)
 
 	def backward(self):
 		dInput1 = np.multiply(eval(self.dz),np.ones_like(eval(self.Input1)))
@@ -62,7 +57,7 @@ class AddGate(Gate):
 
 class NeuronGate(Gate):
 	def __init__(self,Network,Input=None,W=None,bias=None,o=None,activeFunc = None):
-		super(self.__class__, self).__init__('NeuronGate', Network, Input=Input, o=o,W=W,bias=bias,activeFunc=activeFunc)
+		super(self.__class__, self).init(self,'NeuronGate', Network, Input=Input, o=o,W=W,bias=bias,activeFunc=activeFunc)
 		self.w1 = np.zeros_like(eval(self.W))
 		self.w2 = np.zeros_like(self.w1)
 		self.w3 = np.zeros_like(self.w1)
@@ -84,7 +79,6 @@ class NeuronGate(Gate):
 			else:
 				self._output = self.activeFunc.forward(self._output)
 		setattr(self.Nework,self.o,self._output)
-		self.Nework.Gate.updateGateTimes(self)
 
 	def backward(self):
 		dz = eval(self.dz)
@@ -95,32 +89,35 @@ class NeuronGate(Gate):
 			else:
 				dz = self.activeFunc.backward(dz)
 
-		dw = np.asarray(np.dot(dz, eval(self.Input).T)).T
+		self.dw_V = np.asarray(np.dot(dz, eval(self.Input).T)).T
 		dx = np.dot(eval(self.W), dz)
 		if dz.shape[1] > 1:# N > 1
 			b = eval(self.bias)
-			dbias = np.zeros_like(b)
+			self.dbias_V = np.zeros_like(b)
 			for n in range(dz.shape[1]):
 				tmp = dz[:,n]
 				tmp = tmp.reshape(-1,1)
-				dbias += tmp
+				self.dbias_V += tmp
 		else:
-			dbias = dz
-		setattr(self.param,self.dbias,dbias)
-		setattr(self.param,self.dw,dw)
+			self.dbias_V = dz
+		setattr(self.param,self.dbias,self.dbias)
+		setattr(self.param,self.dw,self.dw_V)
 		setattr(self.Nework,self.dInput,dx)
 		#print('dw->',dw)
-		self.update(dw,dbias)
+		#self.update(dw,dbias)
+		#t = threading.Thread(target=self.update)
+		#t.daemon(True)
+		#t.start()
+		self.update()
 		#return dw,dx
-	def update(self,dw,dbias):
-		self.w1, self.w2, self.w3,self.b1, self.b2,self.b3,self.adam_t, = self.param.Optimizer.Update(dw,self.upW,dbias,self.upBias,self.w1,self.w2,self.w3,self.b1,self.b2,self.b3,self.adam_t)
+	def update(self):
+		self.w1, self.w2, self.w3,self.b1, self.b2,self.b3,self.adam_t, = self.param.Optimizer.Update(self.dw_V,self.upW,self.dbias_V,self.upBias,self.w1,self.w2,self.w3,self.b1,self.b2,self.b3,self.adam_t)
 
 class MulGate(Gate):
 	def __init__(self,Network,Input1=None,Input2=None,o=None):
-		super(self.__class__, self).__init__('MulGate', Network, Input1=Input1, Input2=Input2, o=o)
+		super(self.__class__, self).init(self,'MulGate', Network, Input1=Input1, Input2=Input2, o=o)
 	def forward(self):
 		setattr(self.Nework, self.o,np.multiply(eval(self.Input1),eval(self.Input2)))
-		self.Nework.Gate.updateGateTimes(self)
 
 	def backward(self):
 		dInput1 = np.multiply(eval(self.dz),eval(self.Input2))
@@ -130,14 +127,13 @@ class MulGate(Gate):
 
 class InOutGate(Gate):
 	def __init__(self,Network,Input=None,o=None,activeFunc = None):
-		super(self.__class__, self).__init__('MulGate', Network, Input=Input, o=o,activeFunc=activeFunc)
+		super(self.__class__, self).init(self,'InOutGate', Network, Input=Input, o=o,activeFunc=activeFunc)
 	def forward(self):
 		if self.activeFunc is not None:
 			self._output = self.activeFunc.forward(eval(self.Input))
 		else:
 			self._output = eval(self.Input)
 		setattr(self.Nework,self.o,self._output)
-		self.Nework.Gate.updateGateTimes(self)
 
 	def backward(self):
 		if self.activeFunc is not None:
@@ -148,10 +144,9 @@ class InOutGate(Gate):
 
 class ConcateGate(Gate):
 	def __init__(self, Network,  Input1=None, Input2=None,o=None):
-		super(self.__class__, self).__init__('MulGate', Network, Input1=Input1, Input2=Input2,o=o)
+		super(self.__class__, self).init(self,'ConcateGate', Network, Input1=Input1, Input2=Input2,o=o)
 	def forward(self):
 		setattr(self.Nework,self.o,np.concatenate((eval(self.Input1),eval(self.Input2)),axis=0))
-		self.Nework.Gate.updateGateTimes(self)
 
 	def backward(self):
 		l = eval(self.Input1).shape[0]
@@ -160,13 +155,12 @@ class ConcateGate(Gate):
 
 class CopyGate(Gate):
 	def __init__(self, Network, Input=None, o=None):
-		super(self.__class__, self).__init__('MulGate', Network, Input=Input, o=o)
+		super(self.__class__, self).init(self,'CopyGate', Network, Input=Input, o=o)
 
 	def forward(self):
 		setattr(self.Nework, self.o, eval(self.Input))
 		if hasattr(self.Nework, self.dInput) is True:  #
 			setattr(self.Nework, self.dInput, np.zeros_like(eval(self.dz)))
-		self.Nework.Gate.updateGateTimes(self)
 
 	def backward(self):
 
@@ -177,7 +171,7 @@ class CopyGate(Gate):
 
 class FlattenGate(Gate):
 	def __init__(self, Network, Input=None, o=None):
-		super(self.__class__, self).__init__('FlattenGate', Network, Input=Input, o=o)
+		super(self.__class__, self).init(self,'FlattenGate', Network, Input=Input, o=o)
 
 		self.H = 0
 		self.W = 0
@@ -193,7 +187,6 @@ class FlattenGate(Gate):
 			out[:,n] = self.input[n].flatten()
 		self._output = out
 		setattr(self.Nework, self.o, self._output)
-		self.Nework.Gate.updateGateTimes(self)
 
 	def backward(self):
 		dz = eval(self.dz)
@@ -206,7 +199,7 @@ class FlattenGate(Gate):
 
 class CNNGate(Gate):
 	def __init__(self, Network, Input=None,W=None,bias=None,o=None,activeFunc = None,fliters=3,step = 1,padding = 0,channel_in = 1,channel_out = 1):
-		super(self.__class__, self).__init__('CNNGate', Network, Input=Input, o=o, W=W, bias=bias,
+		super(self.__class__, self).init(self,'CNNGate', Network, Input=Input, o=o, W=W, bias=bias,
 											 activeFunc=activeFunc)
 		self.fliters = fliters
 		self.step = step
@@ -255,14 +248,14 @@ class CNNGate(Gate):
 		outputW = int(self.getOutputSize(inputW, self.step, self.fliters, self.padding))
 		outputH = int(self.getOutputSize(inputH, self.step, self.fliters, self.padding))
 		self._output = np.zeros((self.channel_out, outputW, outputH))
-		input = self.paddingZeros(input, self.padding)
-		self.paddedInput = input
+		#input = self.paddingZeros(input, self.padding)
+		#self.paddedInput = input
 
 		nw = w#.transpose(3, 2, 0, 1)
 		wn, wc, wh, ww = np.shape(nw)
-		from Batch2ConvMatrix import Batch2ConvMatrix
+
 		self.b2m = Batch2ConvMatrix(self.step, wh, ww)
-		x2m = self.b2m(self.paddedInput)
+		x2m = self.b2m(input)
 		w2m = nw.reshape(wn, -1)
 		xn, xc, oh, ow = self.b2m.conv_size
 		out_matrix = np.matmul(x2m, w2m.T) + b
@@ -272,7 +265,6 @@ class CNNGate(Gate):
 		out = out.transpose((0, 3, 1, 2))
 		self._output = self.activeFunc.forward(out)
 		setattr(self.Nework, self.o, self._output)
-		self.Nework.Gate.updateGateTimes(self)
 		return out
 
 	def backward(self):
@@ -283,19 +275,23 @@ class CNNGate(Gate):
 		dz = dz.transpose((0, 2, 3, 1))
 		dz = dz.reshape((on * oh * ow, -1))
 		dw = np.matmul(dz.T, self.x2m)
-		dw = dw.reshape(np.shape(w))
-		dbias = np.sum(dz, axis=0)
+		self.dw_V = dw.reshape(np.shape(w))
+		self.dbias_V = np.sum(dz, axis=0)
 		dx2m = np.matmul(dz, self.w2m)
 		dx = self.b2m.backward(dx2m)
-		setattr(self.param, self.dbias, dbias)
-		setattr(self.param, self.dw, dw)
+		setattr(self.param, self.dbias, self.dbias_V)
+		setattr(self.param, self.dw, self.dw_V)
 		setattr(self.Nework, self.dInput, dx)
-		self.update(dw, dbias)
+		#self.update(dw, dbias)
+		#t = threading.Thread(target=self.update)
+		#t.daemon(True)
+		#t.start()
+		self.update()
+	def update(self):
 
-	def update(self, dw, dbias):
-		self.w1, self.w2, self.w3, self.b1, self.b2, self.b3, self.adam_t, = self.param.Optimizer.Update(dw,
+		self.w1, self.w2, self.w3, self.b1, self.b2, self.b3, self.adam_t, = self.param.Optimizer.Update(self.dw_V,
 																												self.upW,
-																												dbias,
+																										 self.dbias_V,
 																												self.upBias,
 																												self.w1,
 																												self.w2,
@@ -307,7 +303,7 @@ class CNNGate(Gate):
 
 class PoolGate(Gate):
 	def __init__(self, Network, Input=None,W=None,bias=None,o=None,activeFunc = None,fliters=2,step = 1,padding=0,F_num = 1,type='MAX'):
-		super(self.__class__, self).__init__('CNNGate', Network, Input=Input, o=o,
+		super(self.__class__, self).init(self,'PoolGate', Network, Input=Input, o=o,
 											 activeFunc=activeFunc)
 		self.fliters = fliters
 		self.step = step
@@ -319,20 +315,12 @@ class PoolGate(Gate):
 	def calc_pool(self, input, type, index, f=0,c = 0):
 		result = .0
 		if type == 'MAX':
-			max = input[0, 0]
-			for i in range(input.shape[0]):
-				for j in range(input.shape[1]):
-					if input[i, j] > max:
-						max = input[i, j]
-						self.bz_x[f][c][index] = i
-						self.bz_y[f][c][index] = j
-
-			result = max
+			result = np.max(input)
+			idx = np.argmax(input)
+			self.bz_x[f][c][index] = int(idx / input.shape[0])
+			self.bz_y[f][c][index] = idx - (self.bz_x[f][c][index] * input.shape[0])
 		elif type == 'AVERAGE':
-			size = input.shape[0] + input.shape[1]
-			for i in range(input.shape[0]):
-				for j in range(input.shape[1]):
-					result += input[i, j] / size
+			result = np.average(input)
 		return result
 
 
@@ -358,7 +346,6 @@ class PoolGate(Gate):
 						self._output[f][c][h][w] = self.calc_pool(i_a, self.type, index, f,c)
 						index += 1
 		setattr(self.Nework, self.o, self._output)
-		self.Nework.Gate.updateGateTimes(self)
 	def backward(self):
 		input = eval(self.Input)
 		dz = eval(self.dz)

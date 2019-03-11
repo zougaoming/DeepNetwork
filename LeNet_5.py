@@ -3,7 +3,7 @@
 import numpy as np
 from tensorflow.examples.tutorials.mnist import input_data
 
-from zouflow.NetworkByJson import Param,Network
+import zouflow as zf
 #from data.mnist.mnist import MNIST_DATA
 from sklearn.utils import shuffle
 
@@ -30,8 +30,8 @@ if __name__ == '__main__':
     mnist = input_data.read_data_sets("data/mnist/", reshape=False)
     x_train, y_train = mnist.train.images, mnist.train.labels
     x_train = np.pad(x_train, ((0, 0), (2, 2), (2, 2), (0, 0)), 'constant')
-    param = Param('./gojs/LeNet-5.txt')
-    network = Network(param=param)
+    param = zf.Param('./gojs/LeNet-5.txt')
+    network = zf.Network(param=param)
     # w1_init = w1_init.reshape(1,6,5,5)
     # network.param.w_1 = w1_init
     BATCH_SIZE = 128
@@ -40,7 +40,9 @@ if __name__ == '__main__':
 
 
 
-
+    param.Loss = zf.SquareLoss()
+    param.rate = 0.05
+    param.Optimizer = zf.SGDandMomentumOptimizer(param)
     for e in range(100):
         x_train, y_train = shuffle(x_train, y_train)
         #for offset in range(1):
@@ -56,7 +58,7 @@ if __name__ == '__main__':
             network.forward(batch_x)
 
 
-            #print('out->',network.Output[:,0],one_hot_y[0])
+            print('out->',network.Output[:,0:2],one_hot_y[0:2])
 
             network.setOutputDelta(one_hot_y.T)
             network.backward()

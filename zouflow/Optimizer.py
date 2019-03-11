@@ -131,15 +131,28 @@ class AdadeltaOptimizer:#ok
 		#rate = 0.001
 		rho = 0.95
 		epsilon = 1e-10
-		w1 = rho * w1 + (1-rho) * np.square(dw)
-		w2 = np.sqrt((w3 + epsilon)/(w1 + epsilon)) * dw
+		if dw.ndim == 2:
+			for n in range(dw.shape[1]):
+				w1[:,n] = rho * w1[:,n] + (1-rho) * np.square(dw[:,n])
+				w2[:,n] = np.sqrt((w3[:,n] + epsilon)/(w1[:,n] + epsilon)) * dw[:,n]
+				w3[:, n] = rho * w3[:, n] + (1 - rho) * np.square(w2[:, n])
 
-		b1 = rho * b1 + (1 - rho) * np.square(dbias)
-		b2 = np.sqrt((b3 + epsilon) / (b1 + epsilon)) * dbias
+
+			b1 = rho * b1 + (1 - rho) * np.square(dbias)
+			b2 = np.sqrt((b3 + epsilon) / (b1 + epsilon)) * dbias
+			b3 = rho * b3 + (1 - rho) * np.square(b2)
+
+		else:
+			for n in range(dw.shape[0]):
+				w1[n] = rho * w1[n] + (1 - rho) * np.square(dw[n])
+				w2[n] = np.sqrt((w3[n] + epsilon) / (w1[n] + epsilon)) * dw[n]
+
+				b1[n] = rho * b1[n] + (1 - rho) * np.square(dbias[n])
+				b2[n] = np.sqrt((b3[n] + epsilon) / (b1[n] + epsilon)) * dbias[n]
+
+				w3[n] = rho * w3[n] + (1 - rho) * np.square(w2[n])
+				b3[n] = rho * b3[n] + (1 - rho) * np.square(b2[n])
+
 		setattr(self.param, upW, eval('self.param.' + upW) - rate * w2)
 		setattr(self.param, upBias, eval('self.param.' + upBias) - rate * b2)
-		w3 = rho * w3 + (1-rho) * np.square(w2)
-		b3 = rho * b3 + (1 - rho) * np.square(b2)
-
-
 		return w1, w2,w3, b1, b2,b3, t

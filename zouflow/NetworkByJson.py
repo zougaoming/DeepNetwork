@@ -21,13 +21,12 @@ class Param:
 class Network:
 	def __init__(self, param):
 		"""
-
 		:rtype: object
 		"""
 		self.param = param
 		self.jsonModel = JsonModel(self.param)
 		self.jsonModel.run()
-		self.Gate = Gate('', self)
+		self.backwardList = BackwardList()
 		self.Gates = self.jsonModel.getGatesAndParam(self)
 
 	def forward(self, input):
@@ -60,7 +59,7 @@ class Network:
 			setattr(self, key, eval(value))
 
 		#self.Gate.printGateTimes()
-		self.Gate.runBackward()  # backward
+		self.backwardList.run()
 		result = []
 		for db in self.jsonModel.DB:  # toDB
 			value = 'self.do' + self.jsonModel.key2bz(db['key'])
@@ -75,13 +74,13 @@ class Network:
 		#delta = (-target + self.Output)
 		delta = np.zeros_like(target)
 		Loss = self.param.Loss
-		s = 0
-		for n in range(target.shape[1]):
-			s += Loss.loss(self.Output[:,n], target[:,n])
-			delta[:,n] = Loss.backward(self.Output[:,n], target[:,n])
+		#s = 0
+		#for n in range(target.shape[1]):
+		#	s += Loss.loss(self.Output[:,n], target[:,n])
+		#	delta[:,n] = Loss.backward(self.Output[:,n], target[:,n])
 		print(Loss.loss(self.Output, target))
 		#print(s/target.shape[1])
-		#delta = Loss.backward(self.Output, target)
+		delta = Loss.backward(self.Output, target)
 		#delta = softmax3Activator().loss(target,self.Output)
 		self.dOutput = delta
 
