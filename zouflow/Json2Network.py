@@ -87,7 +87,7 @@ class JsonModel:
 			if ('neuron' in g.Key):
 				for ws in self.WS:
 					if '"' + ws + '"' in g.Value:
-						value = 'np.random.uniform(-0.01, 0.01, size=('+ str(g.inputsize) +', '+ str(g.outputsize) +'))'
+						value = 'np.random.uniform(-0.2, 0.2, size=('+ str(g.inputsize) +', '+ str(g.outputsize) +'))'
 						key = ws
 						#print(key,value)
 						setattr(self.param,key,eval(value))
@@ -102,7 +102,7 @@ class JsonModel:
 			if('cnn' in g.Key):
 				for ws in self.WS:
 					if '"' + ws + '"' in g.Value:
-						value = 'np.random.uniform(-0.01, 0.01, size=(' + str(g.channel_out) + ', ' + str(
+						value = 'np.random.uniform(-0.2, 0.2, size=(' + str(g.channel_out) + ', ' + str(
 							g.channel_in) + ',' + str(g.outputsize) + ',' + str(g.outputsize) + '))'
 						key = ws
 						# print(key,value)

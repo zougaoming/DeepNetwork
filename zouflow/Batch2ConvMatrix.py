@@ -36,7 +36,7 @@ class Batch2ConvMatrix:
         self.conv_size = [x_nums, x_channels, conv_height, conv_width]
         return conv_matrix
 
-    def backward(self, dx2m):
+    def backward(self, dx2m):#0.720
         dx = np.zeros_like(self.x)
         kh = self.kernel_h
         kw = self.kernel_w
