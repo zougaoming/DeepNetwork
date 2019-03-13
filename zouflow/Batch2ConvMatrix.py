@@ -2,20 +2,29 @@ import numpy as np
 
 
 class Batch2ConvMatrix:
-    def __init__(self, stride, kernel_h, kernel_w):
+    def __init__(self, stride, kernel_h, kernel_w,panding):
         self.stride = stride
         self.kernel_h = kernel_h
         self.kernel_w = kernel_w
+        self.panding = panding
 
         self.x = None
         self.conv_size = None
 
+    def paddingZeros(self, input, P):
+        if P > 0:
+            if input.ndim == 2:
+                input = np.pad(input, ((P, P), (P, P)), 'constant')
+            elif input.ndim == 4:
+                input = np.pad(input, ((0, 0), (0, 0), (P, P), (P, P)), 'constant')
+        return input
+
     def __call__(self, x):
         self.x = x
         x_nums, x_channels, x_height, x_width = np.shape(self.x)
-
-        conv_height = int((x_height - self.kernel_h) / self.stride) + 1
-        conv_width = int((x_width - self.kernel_w) / self.stride) + 1
+        conv_height = int((x_height - self.kernel_h + 2 * self.panding) / self.stride) + 1
+        conv_width = int((x_width - self.kernel_w + 2 * self.panding) / self.stride) + 1
+        x = self.paddingZeros(x,self.panding)
 
         scan = np.zeros((x_nums, conv_height, conv_width,
                          x_channels, self.kernel_h, self.kernel_w))
@@ -28,9 +37,7 @@ class Batch2ConvMatrix:
                         start_w = w * self.stride
                         end_h = start_h + self.kernel_h
                         end_w = start_w + self.kernel_w
-
-                        scan[n, h, w, c] = \
-                            x[n, c, start_h:end_h, start_w:end_w]
+                        scan[n, h, w, c] = x[n, c, start_h:end_h, start_w:end_w]
 
         conv_matrix = scan.reshape(x_nums * conv_height * conv_width, -1)
         self.conv_size = [x_nums, x_channels, conv_height, conv_width]
@@ -38,12 +45,16 @@ class Batch2ConvMatrix:
 
     def backward(self, dx2m):#0.720
         dx = np.zeros_like(self.x)
+        zp = 0
+        if self.panding > 0:
+            zp = self.kernel_h - self.panding - 1
+        dtmp = self.paddingZeros(dx, zp)
         kh = self.kernel_h
         kw = self.kernel_w
+
         xn, xc, ch, cw = self.conv_size
 
         dx2m = dx2m.reshape((xn, ch, cw, xc, kh, kw))
-
         for n in range(xn):
             for c in range(xc):
                 for h in range(ch):
@@ -52,9 +63,9 @@ class Batch2ConvMatrix:
                         start_w = w * self.stride
                         end_h = start_h + self.kernel_h
                         end_w = start_w + self.kernel_w
-
-                        dx[n, c][start_h:end_h, start_w:end_w] += dx2m[n, h, w, c]
-
+                        #print(n,c,h,w)
+                        dtmp[n, c][start_h:end_h, start_w:end_w] += dx2m[n, h, w, c]
+        dx = dtmp[:,:,self.panding:dtmp.shape[2]-self.panding,self.panding:dtmp.shape[3]-self.panding]
         return dx
 
 

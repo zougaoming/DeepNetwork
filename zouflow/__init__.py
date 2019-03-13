@@ -9,6 +9,7 @@ from .Loss import *
 from .NetworkByJson import *
 from .Optimizer import *
 from .Save import *
+from .GetSet import GetSet
 
 # Create a default graph.
 import builtins
