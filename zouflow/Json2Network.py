@@ -6,7 +6,7 @@ from .Gate import *
 from .ActiveFunc import *
 
 class Link:
-	def __init__(self,f,t,f2=0,Key=None,Value = None,inputsize=0,outputsize=0):
+	def __init__(self,f,t,f2=0,Key=None,Value = None,inputsize=0,outputsize=0,otherKey=''):
 		self.f = f
 		self.t = t
 		self.Key = Key
@@ -16,6 +16,7 @@ class Link:
 		self.outputsize = outputsize#flite
 		self.channel_in = 0
 		self.channel_out = 0
+		self.otherKey = otherKey
 class JsonModel:
 	def __init__(self,param=None):
 		self.param = param
@@ -316,13 +317,16 @@ class JsonModel:
 			key = node['key']
 			bz = self.key2bz(key)
 			o = 'o' + bz
+			otherKey = text
 			#print(node)
-			if text.lower() == 'input':
+			if text.lower()[0:5] == 'input':
 				s = 'InOutGate(T,Input="input",o="' + o + '")'
-				l = Link(0, key, 0, 'inputGate' + bz,s,inputsize=self.param.inputsize,outputsize=self.param.inputsize)
+				if len(text) == 5:
+					otherKey = otherKey + str(key)
+				l = Link(0, key, 0, 'inputGate' + bz,s,inputsize=self.param.inputsize,outputsize=self.param.inputsize,otherKey=otherKey)
 				self.Gates.append(l)
 				self.input = 'input'
-			elif text.lower() == 'neuron':
+			elif text.lower()[0:6] == 'neuron':
 				w = 'w' + bz
 				bias = 'b' + bz
 				upNodes = self.getInputNodeKey(key)
@@ -345,12 +349,14 @@ class JsonModel:
 					inputsize = self.param.w_input
 				if outputsize == 0:
 					outputsize = self.param.w_output
+				if len(text) == 6:
+					otherKey = otherKey + str(key)
 				s = 'NeuronGate(T,Input="' + Input + '",W="' + w + '",bias="' + bias + '",o="' + o + '",activeFunc='+ activeFunc +')'
-				l = Link(upNodes[0], key, 0, 'neuronGate' + bz,s,inputsize=inputsize,outputsize=outputsize)
+				l = Link(upNodes[0], key, 0, 'neuronGate' + bz,s,inputsize=inputsize,outputsize=outputsize,otherKey=otherKey)
 				self.Gates.append(l)
 				self.WS.append(w)
 				self.BiasS.append(bias)
-			elif text.lower() == 'concate':
+			elif text.lower()[0:7] == 'concate':
 				upNodes = self.getInputNodeKey(key,needSord=True)
 				Input1 = 'o' + self.key2bz(upNodes[0])
 				Input2 = 'o' + self.key2bz(upNodes[1])
@@ -363,30 +369,38 @@ class JsonModel:
 						inputsize = int(tmp[1])
 						outputsize = int(tmp[2])
 				s = 'ConcateGate(T,Input1="' + Input1 + '",Input2="' + Input2 + '",o="' + o + '")'
-				l = Link(upNodes[0], key, upNodes[1], 'concateGate' + bz,s,inputsize=inputsize,outputsize=outputsize)
+				if len(text) == 7:
+					otherKey = otherKey + str(key)
+				l = Link(upNodes[0], key, upNodes[1], 'concateGate' + bz,s,inputsize=inputsize,outputsize=outputsize,otherKey=otherKey)
 				self.Gates.append(l)
 
-			elif text.lower() == 'mul':
+			elif text.lower()[0:3] == 'mul':
 				upNodes = self.getInputNodeKey(key)
 				Input1 = 'o' + self.key2bz(upNodes[0])
 				Input2 = 'o' + self.key2bz(upNodes[1])
 				s = 'MulGate(T, Input1="' + Input1 + '",Input2="' + Input2 + '",o="' + o + '")'
+				if len(text) == 3:
+					otherKey = otherKey + str(key)
 				l = Link(upNodes[0], key, upNodes[1], 'mulGate' + bz,s)
 				self.Gates.append(l)
-			elif text == 'Add':
+			elif text.lower()[0:3] == 'Add':
 				upNodes = self.getInputNodeKey(key)
 				Input1 = 'o' + self.key2bz(upNodes[0])
 				Input2 = 'o' + self.key2bz(upNodes[1])
 				s = 'AddGate(T, Input1="' + Input1 + '",Input2="' + Input2 + '",o="' + o + '")'
-				l = Link(upNodes[0], key, upNodes[1], 'addGate' + bz,s)
+				if len(text) == 3:
+					otherKey = otherKey + str(key)
+				l = Link(upNodes[0], key, upNodes[1], 'addGate' + bz,s,otherKey=otherKey)
 				self.Gates.append(l)
-			elif text.lower() == 'copy':
+			elif text.lower()[0:4] == 'copy':
 				upNodes = self.getInputNodeKey(key)
 				Input = 'o' + self.key2bz(upNodes[0])
 				s = 'CopyGate(T, Input="' + Input + '",o="' + o + '")'
-				l = Link(upNodes[0], key, 0, 'copyGate' + bz,s)
+				if len(text) == 4:
+					otherKey = otherKey + str(key)
+				l = Link(upNodes[0], key, 0, 'copyGate' + bz,s,otherKey=otherKey)
 				self.Gates.append(l)
-			elif text.lower() == 'inout':
+			elif text.lower()[0:5] == 'inout':
 				upNodes = self.getInputNodeKey(key)
 				Input = 'o' + self.key2bz(upNodes[0])
 				Values = self.getValue(key)
@@ -397,9 +411,11 @@ class JsonModel:
 				if activeFunc == None and hasattr(self.param, 'ActiveFunc'):
 					activeFunc = self.param.ActiveFunc
 				s = 'InOutGate(T, Input="' + Input + '",o="' + o + '",activeFunc='+ activeFunc +')'
-				l = Link(upNodes[0], key, 0, 'inoutGate' + bz,s)
+				if len(text) == 5:
+					otherKey = otherKey + str(key)
+				l = Link(upNodes[0], key, 0, 'inoutGate' + bz,s,otherKey=otherKey)
 				self.Gates.append(l)
-			elif text.lower() == 'cnn':
+			elif text.lower()[0:3] == 'cnn':
 				w = 'w' + bz
 				bias = 'b' + bz
 				upNodes = self.getInputNodeKey(key)
@@ -440,14 +456,16 @@ class JsonModel:
 					outputsize = self.param.w_output
 				s = 'CNNGate(T,Input="' + Input + '",W="' + w + '",bias="' + bias + '",o="' + o + '",activeFunc=' + activeFunc + ',fliters='+F+',step='+ S +',padding='+P+\
 					',channel_in='+ channel_in +',channel_out=' + channel_out + ')'
-				l = Link(upNodes[0], key, 0, 'cnnGate' + bz, s,inputsize=N, outputsize=F)
+				if len(text) == 3:
+					otherKey = otherKey + str(key)
+				l = Link(upNodes[0], key, 0, 'cnnGate' + bz, s,inputsize=N, outputsize=F,otherKey=otherKey)
 				l.channel_in = channel_in
 				l.channel_out = channel_out
 				self.Gates.append(l)
 				self.WS.append(w)
 				self.BiasS.append(bias)
 
-			elif text.lower() == 'pool':
+			elif text.lower()[0:4] == 'pool' and text.lower()[0:8] != 'pooltype':
 				upNodes = self.getInputNodeKey(key)
 				Input = 'o' + self.key2bz(upNodes[0])
 				Values = self.getValue(key)
@@ -467,15 +485,20 @@ class JsonModel:
 						N = (tmp[4])
 				#if PoolType == None and hasattr(self.param, 'PoolType'):
 				#	activeFunc = self.param.ActiveFunc
+				if PoolType is None:PoolType = 'MAX'
 				s = 'PoolGate(T, Input="' + Input + '",o="' + o + '",type="'+ PoolType +'",fliters='+F+',step='+ S +',padding='+P+',F_num='+ N +')'
-				l = Link(upNodes[0], key, 0, 'poolGate' + bz, s)
+				if len(text) == 4:
+					otherKey = otherKey + str(key)
+				l = Link(upNodes[0], key, 0, 'poolGate' + bz, s,otherKey=otherKey)
 				self.Gates.append(l)
 
-			elif text.lower() == 'flatten':
+			elif text.lower()[0:7] == 'flatten':
 				upNodes = self.getInputNodeKey(key)
 				Input = 'o' + self.key2bz(upNodes[0])
 				s = 'FlattenGate(T, Input="' + Input + '",o="' + o + '")'
-				l = Link(upNodes[0], key, 0, 'flattenGate' + bz, s)
+				if len(text) == 7:
+					otherKey = otherKey + str(key)
+				l = Link(upNodes[0], key, 0, 'flattenGate' + bz, s,otherKey=otherKey)
 				self.Gates.append(l)
 			elif node['figure'] != 'Value' and node['figure'] != 'Database' and node['figure'] != 'Output':
 				upNodes = self.getInputNodeKey(key)

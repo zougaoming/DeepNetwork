@@ -3,6 +3,7 @@ from zouflow.Gate import *
 from zouflow.Json2Network import JsonModel
 from zouflow.Loss import *
 from zouflow.Optimizer import *
+from zouflow.GetSet import *
 
 
 class Param:
@@ -28,6 +29,7 @@ class Network:
 		self.jsonModel.run()
 		self.backwardList = BackwardList()
 		self.Gates = self.jsonModel.getGatesAndParam(self)
+		self.GetSet = GetSet(self)
 
 	def forward(self, input):
 
@@ -39,7 +41,7 @@ class Network:
 
 		for g in self.Gates:  # forward
 			str = 'self.' + g.Key + '.forward()'
-			#print(str)
+			print(str)
 			eval(str)
 
 		result = []
@@ -78,7 +80,7 @@ class Network:
 		#for n in range(target.shape[1]):
 		#	s += Loss.loss(self.Output[:,n], target[:,n])
 		#	delta[:,n] = Loss.backward(self.Output[:,n], target[:,n])
-		print(Loss.loss(self.Output, target))
+		print('Network loss->',Loss.loss(self.Output, target))
 		#print(s/target.shape[1])
 		delta = Loss.backward(self.Output, target)
 		#delta = softmax3Activator().loss(target,self.Output)

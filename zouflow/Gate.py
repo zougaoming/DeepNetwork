@@ -1,5 +1,6 @@
 import numpy as np
 from .Batch2ConvMatrix import *
+#import GateC
 class BackwardList:
 	def __init__(self):
 		self.Gates = []
@@ -218,15 +219,7 @@ class CNNGate(Gate):
 	def getOutputSize(self, M, S, F, P):
 		return (M - F + 2 * P) / S + 1
 
-	def paddingZeros(self, input, P):
-		if P > 0:
-			p = np.zeros((input.shape[1], P))
-			input = np.c_[input, p]
-			input = np.c_[p, input]
-			p = np.zeros((P, input.shape[0] + 2 * P))
-			input = np.r_[input, p]
-			input = np.r_[p, input]
-		return input
+
 
 	def conv(self, input, weight, outputW, outputH, step):
 		result = np.zeros((outputH, outputW))
@@ -237,6 +230,13 @@ class CNNGate(Gate):
 				result[h][w] = np.multiply(i_a,weight).sum()  # self.calc_connv(i_a,weight)#np.multiply(i_a,weight).sum()#self.calc_connv(i_a,weight)
 		return result
 
+	def paddingZeros(self, input, P):
+		if P > 0:
+			if input.ndim == 2:
+				input = np.pad(input, ((P, P), (P, P)), 'constant')
+			elif input.ndim == 4:
+				input = np.pad(input, ((0, 0), (0, 0), (P, P), (P, P)), 'constant')
+		return input
 	def forward(self):
 		input = eval(self.Input)
 		w = eval(self.W)
@@ -245,16 +245,16 @@ class CNNGate(Gate):
 		inputH = input.shape[input.ndim - 1]
 		self.inputW = inputW
 		self.inputH = inputH
-		outputW = int(self.getOutputSize(inputW, self.step, self.fliters, self.padding))
-		outputH = int(self.getOutputSize(inputH, self.step, self.fliters, self.padding))
-		self._output = np.zeros((self.channel_out, outputW, outputH))
+		#outputW = int(self.getOutputSize(inputW, self.step, self.fliters, self.padding))
+		#outputH = int(self.getOutputSize(inputH, self.step, self.fliters, self.padding))
+		#self._output = np.zeros((self.channel_out, outputW, outputH))
 		#input = self.paddingZeros(input, self.padding)
 		#self.paddedInput = input
 
 		nw = w#.transpose(3, 2, 0, 1)
 		wn, wc, wh, ww = np.shape(nw)
 
-		self.b2m = Batch2ConvMatrix(self.step, wh, ww)
+		self.b2m = Batch2ConvMatrix(self.step, wh, ww,self.padding)
 		x2m = self.b2m(input)
 		w2m = nw.reshape(wn, -1)
 		xn, xc, oh, ow = self.b2m.conv_size
@@ -277,7 +277,13 @@ class CNNGate(Gate):
 		dw = np.matmul(dz.T, self.x2m)
 		self.dw_V = dw.reshape(np.shape(w))
 		self.dbias_V = np.sum(dz, axis=0)
+
+
+
 		dx2m = np.matmul(dz, self.w2m)
+		#zp = self.fliters - self.padding - 1
+		#dx2m = self.paddingZeros(dx2m, zp)
+
 		dx = self.b2m.backward(dx2m)
 		setattr(self.param, self.dbias, self.dbias_V)
 		setattr(self.param, self.dw, self.dw_V)
@@ -312,7 +318,7 @@ class PoolGate(Gate):
 	def getOutputSize(self, M, S, F):
 		return (M - F ) / S + 1
 
-	def calc_pool(self, input, type, index, f=0,c = 0):
+	def calc_pool3(self, input, type, index, f=0,c = 0):
 		result = .0
 		if type == 'MAX':
 			result = np.max(input)
@@ -323,6 +329,24 @@ class PoolGate(Gate):
 			result = np.average(input)
 		return result
 
+	def calc_pool(self, input, type, index, f=0, c=0):
+		result = .0
+		if type == 'MAX':
+			max = input[0, 0]
+			for i in range(input.shape[0]):
+				for j in range(input.shape[1]):
+					if input[i, j] > max:
+						max = input[i, j]
+						self.bz_x[f][c][index] = i
+						self.bz_y[f][c][index] = j
+
+			result = max
+		elif type == 'AVERAGE':
+			size = input.shape[0] + input.shape[1]
+			for i in range(input.shape[0]):
+				for j in range(input.shape[1]):
+					result += input[i, j] / size
+		return result
 
 	def forward(self):
 		input = eval(self.Input)
@@ -354,8 +378,8 @@ class PoolGate(Gate):
 			for c in range(self.channel):
 				if self.type == 'MAX':
 					index = 0
-					for i in range(self.outputW):
-						for j in range(self.outputH):
+					for i in range(self.outputH):
+						for j in range(self.outputW):
 							x = int(i * self.step + self.bz_x[f][c][index])
 							y = int(j * self.step + self.bz_y[f][c][index])
 							result[f][c][x][y] = dz[f][c][i][j]
