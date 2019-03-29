@@ -7,8 +7,15 @@ class ReluActivator(object):
 		self._output = np.maximum(weighted_input,0)
 		return self._output
 	def backward(self, dz): # 后向计算，计算导数
+		#print("here dz,shape",dz.shape,"   output.shape->",self._output.shape)
 		dnx = np.where(self._output>0,dz,0)
 		#dnx = (1 if self._output > 0 else 0) * dz
+		return dnx
+
+	def backward2(self, dz,output):  # 后向计算，计算导数
+		# print("here dz,shape",dz.shape,"   output.shape->",self._output.shape)
+		dnx = np.where(output > 0, dz, 0)
+		# dnx = (1 if self._output > 0 else 0) * dz
 		return dnx
 
 # IdentityActivator激活器.f(x)=x
@@ -28,6 +35,9 @@ class SigmoidActivator(object):
 	def backward(self, dz):
 		dnx = np.multiply(self._output, (1 - self._output)) * dz
 		return dnx
+	def backward2(self, dz,_output):
+		dnx = np.multiply(_output, (1 - _output)) * dz
+		return dnx
 
 # tanh激活器
 class TanhActivator(object):
@@ -37,8 +47,8 @@ class TanhActivator(object):
 	def backward(self, dz):
 		dnx = (1 - self._output * self._output) * dz
 		return dnx
-	def backward2(self,output):
-		return (1 - output * output)
+	def backward2(self,dz,output):
+		return (1 - output * output) * dz
 
 class SoftmaxActivator:#ok
 	def forward(self, nx):

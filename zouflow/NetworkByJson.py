@@ -26,9 +26,13 @@ class Network:
 		"""
 		self.param = param
 		self.jsonModel = JsonModel(self.param)
+		print("222")
 		self.jsonModel.run()
+		print("333")
 		self.backwardList = BackwardList()
+		print("444")
 		self.Gates = self.jsonModel.getGatesAndParam(self)
+		print("555")
 		self.GetSet = GetSet(self)
 
 	def forward(self, input):
@@ -41,7 +45,7 @@ class Network:
 
 		for g in self.Gates:  # forward
 			str = 'self.' + g.Key + '.forward()'
-			print(str)
+			#print(str)
 			eval(str)
 
 		result = []

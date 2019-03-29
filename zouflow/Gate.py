@@ -1,6 +1,7 @@
 import numpy as np
 from .Batch2ConvMatrix import *
-#import GateC
+import GateC
+import datetime
 class BackwardList:
 	def __init__(self):
 		self.Gates = []
@@ -51,10 +52,8 @@ class AddGate(Gate):
 		setattr(self.Nework, self.o, eval(self.Input1 + '+' + self.Input2))
 
 	def backward(self):
-		dInput1 = np.multiply(eval(self.dz),np.ones_like(eval(self.Input1)))
-		dInput2 = np.multiply(eval(self.dz),np.ones_like(eval(self.Input2)))
-		setattr(self.Nework,self.dInput1,dInput1)
-		setattr(self.Nework,self.dInput2,dInput2)
+		setattr(self.Nework,self.dInput1,eval(self.dz))
+		setattr(self.Nework,self.dInput2,eval(self.dz))
 
 class NeuronGate(Gate):
 	def __init__(self,Network,Input=None,W=None,bias=None,o=None,activeFunc = None):
@@ -221,13 +220,14 @@ class CNNGate(Gate):
 
 
 
-	def conv(self, input, weight, outputW, outputH, step):
+	def conv(self, input, weight, outputH, outputW, step):
 		result = np.zeros((outputH, outputW))
 		fliter = weight.shape[0]
 		for h in range(outputH):
 			for w in range(outputW):
 				i_a = input[h * step:h * step + fliter, w * step:w * step + fliter]
 				result[h][w] = np.multiply(i_a,weight).sum()  # self.calc_connv(i_a,weight)#np.multiply(i_a,weight).sum()#self.calc_connv(i_a,weight)
+				#print("python h=", h, "w=", w, "sum=", result[h][w])
 		return result
 
 	def paddingZeros(self, input, P):
@@ -238,60 +238,26 @@ class CNNGate(Gate):
 				input = np.pad(input, ((0, 0), (0, 0), (P, P), (P, P)), 'constant')
 		return input
 	def forward(self):
-		input = eval(self.Input)
-		w = eval(self.W)
-		b = eval(self.bias)
-		inputW = input.shape[-1]
-		inputH = input.shape[input.ndim - 1]
-		self.inputW = inputW
-		self.inputH = inputH
-		#outputW = int(self.getOutputSize(inputW, self.step, self.fliters, self.padding))
-		#outputH = int(self.getOutputSize(inputH, self.step, self.fliters, self.padding))
-		#self._output = np.zeros((self.channel_out, outputW, outputH))
-		#input = self.paddingZeros(input, self.padding)
-		#self.paddedInput = input
+		starttime = datetime.datetime.now()
+		self._output = GateC.CnnGate(np.array(eval(self.Input),dtype=np.float64),np.array(eval(self.W),dtype=np.float64),np.array(eval(self.bias),dtype=np.float64),self.step,self.padding)
+		endtime = datetime.datetime.now()
+		print('cnn zjCforwardtime->', endtime-starttime)
 
-		nw = w#.transpose(3, 2, 0, 1)
-		wn, wc, wh, ww = np.shape(nw)
-
-		self.b2m = Batch2ConvMatrix(self.step, wh, ww,self.padding)
-		x2m = self.b2m(input)
-		w2m = nw.reshape(wn, -1)
-		xn, xc, oh, ow = self.b2m.conv_size
-		out_matrix = np.matmul(x2m, w2m.T) + b
-		out = out_matrix.reshape((xn, oh, ow, wn))
-		self.x2m = x2m
-		self.w2m = w2m
-		out = out.transpose((0, 3, 1, 2))
-		self._output = self.activeFunc.forward(out)
 		setattr(self.Nework, self.o, self._output)
-		return out
+		return self._output
 
 	def backward(self):
-		dz = eval(self.dz)
-		w = eval(self.W)
-		dz = self.activeFunc.backward(dz)
-		on, oc, oh, ow = np.shape(dz)
-		dz = dz.transpose((0, 2, 3, 1))
-		dz = dz.reshape((on * oh * ow, -1))
-		dw = np.matmul(dz.T, self.x2m)
-		self.dw_V = dw.reshape(np.shape(w))
-		self.dbias_V = np.sum(dz, axis=0)
+		starttime = datetime.datetime.now()
+		dz =eval(self.dz)
+		#dz = self.activeFunc.backward2(eval(self.dz),self._output)
+		#dz2 = GateC.test(db,self._output);
+		#print(dz - dz2)
+		input = eval(self.Input)
+		self.dw_V,self.dbias_V,dx = GateC.CnnGate_Backward(np.array(eval(self.Input),dtype=np.float64),np.array(self._output,dtype=np.float64),np.array(dz, dtype=np.float64),np.array(eval(self.W), dtype=np.float64),np.array(eval(self.bias), dtype=np.float64), self.step, self.padding);
 
-
-
-		dx2m = np.matmul(dz, self.w2m)
-		#zp = self.fliters - self.padding - 1
-		#dx2m = self.paddingZeros(dx2m, zp)
-
-		dx = self.b2m.backward(dx2m)
 		setattr(self.param, self.dbias, self.dbias_V)
 		setattr(self.param, self.dw, self.dw_V)
 		setattr(self.Nework, self.dInput, dx)
-		#self.update(dw, dbias)
-		#t = threading.Thread(target=self.update)
-		#t.daemon(True)
-		#t.start()
 		self.update()
 	def update(self):
 
@@ -314,83 +280,18 @@ class PoolGate(Gate):
 		self.fliters = fliters
 		self.step = step
 		self.type = type
-
-	def getOutputSize(self, M, S, F):
-		return (M - F ) / S + 1
-
-	def calc_pool3(self, input, type, index, f=0,c = 0):
-		result = .0
-		if type == 'MAX':
-			result = np.max(input)
-			idx = np.argmax(input)
-			self.bz_x[f][c][index] = int(idx / input.shape[0])
-			self.bz_y[f][c][index] = idx - (self.bz_x[f][c][index] * input.shape[0])
-		elif type == 'AVERAGE':
-			result = np.average(input)
-		return result
-
-	def calc_pool(self, input, type, index, f=0, c=0):
-		result = .0
-		if type == 'MAX':
-			max = input[0, 0]
-			for i in range(input.shape[0]):
-				for j in range(input.shape[1]):
-					if input[i, j] > max:
-						max = input[i, j]
-						self.bz_x[f][c][index] = i
-						self.bz_y[f][c][index] = j
-
-			result = max
-		elif type == 'AVERAGE':
-			size = input.shape[0] + input.shape[1]
-			for i in range(input.shape[0]):
-				for j in range(input.shape[1]):
-					result += input[i, j] / size
-		return result
-
 	def forward(self):
 		input = eval(self.Input)
+		if self.type == 'MAX':
+			self._output,self.bz_x,self.bz_y = GateC.PoolGate(np.array(input,dtype=np.float64), self.fliters, self.step,self.type)
+		else:
+			self._output = GateC.PoolGate(input, self.fliters, self.step, self.type)
 
-		self.FNum = input.shape[0]
-		self.channel = input.shape[1]
-		inputW = input.shape[3]
-		inputH = input.shape[2]
-		self.outputW = int(self.getOutputSize(inputW, self.step, self.fliters))
-		self.outputH = int(self.getOutputSize(inputH, self.step, self.fliters))
-		self._output = np.zeros((self.FNum, self.channel,self.outputH, self.outputW))
-		self.bz_x = np.zeros((self.FNum, self.channel,self.outputW * self.outputH))
-		self.bz_y = np.zeros((self.FNum, self.channel,self.outputW * self.outputH))
-		for f in range(self.FNum):
-			for c in range(self.channel):
-				index = 0
-				for h in range(self.outputH):
-					for w in range(self.outputW):
-						i_a = input[f][c][h * self.step:h * self.step + self.fliters,
-								w * self.step:w * self.step + self.fliters]
-						self._output[f][c][h][w] = self.calc_pool(i_a, self.type, index, f,c)
-						index += 1
 		setattr(self.Nework, self.o, self._output)
 	def backward(self):
-		input = eval(self.Input)
-		dz = eval(self.dz)
-		result = np.zeros((input.shape))
-		for f in range(self.FNum):
-			for c in range(self.channel):
-				if self.type == 'MAX':
-					index = 0
-					for i in range(self.outputH):
-						for j in range(self.outputW):
-							x = int(i * self.step + self.bz_x[f][c][index])
-							y = int(j * self.step + self.bz_y[f][c][index])
-							result[f][c][x][y] = dz[f][c][i][j]
-							index += 1
 
-				elif self.type == 'AVERAGE':
-					for i in range(self.outputW):
-						for j in range(self.outputH):
-							pool_size = self.step * self.step
-							for m in range(self.step):
-								for n in range(self.step):
-									result[f][c][i * self.step + m][j * self.step + n] = dz[f][c][i][j] / pool_size
-		#result = result *
+		result = GateC.PoolGate_Backward(np.array(eval(self.Input),dtype=np.float64), np.array(self._output,dtype=np.float64),np.array(eval(self.dz),dtype=np.float64),
+										 np.array(self.bz_x, dtype=np.float64),np.array(self.bz_y,dtype=np.float64),
+										 self.fliters, self.step,self.type)
+
 		setattr(self.Nework, self.dInput, result)
