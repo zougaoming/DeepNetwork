@@ -9,16 +9,32 @@
 #include "CnnGate.h"
 void Conv(Matrix *input,Matrix *weight,Matrix *i_a,Matrix* result,int outputH,int outputW,int strids)
 {
-    
+    double tmp;
+    int z = i_a->dshape.shape[3];
+    int inputz = input->dshape.shape[3];
+    setZeros(result);
     for(int h=0;h<outputH;h++)
     {
         for(int w=0;w<outputW;w++)
         {
-            getSecondOrderSubMatrix2(input,i_a,h * strids,w*strids);
-            dotSecondOrderMatrixs2(i_a,weight);
-            double tmp = getMatrixSum(i_a);
+            int resulti = h * result->dshape.shape[3] + w;
+            int starti = w * strids + h * strids * (inputz);
+            
+            for(int i=0;i<i_a->dshape.shape[2];i++){
+                for(int j=0;j<z;j++){
+                    int bindex = i * z + j;
+                    tmp = *(input->array + starti + i*inputz+j);
+                    tmp *= *(weight->array + bindex);
+                    *(result->array + resulti) += tmp;
+                }
+            }
+            
+            
+            //getSecondOrderSubMatrix2(input,i_a,h * strids,w*strids);
+            //dotSecondOrderMatrixs2(i_a,weight);
+            //double tmp = getMatrixSum(i_a);
             //printf("C h=%d,w=%d,sum=%f\n",h,w,tmp);
-            modifyMatrixElem(result, 0, 0, h, w, tmp);
+            //modifyMatrixElem(result, 0, 0, h, w, tmp);
         }
     }
 }
@@ -102,7 +118,6 @@ void Backward(CnnGateParam *p)
 
 void Forward(CnnGateParam *p)
 {
-    
     int channel_out = p->weight->dshape.shape[0];
     int channel_in = p->weight->dshape.shape[1];
     int N = p->input->dshape.shape[0];
@@ -115,7 +130,6 @@ void Forward(CnnGateParam *p)
     Dshape outputShape;
     initDshapeInt(&outputShape,N,channel_out,outputH,outputW);
     Matrix * _output = creatZerosMatrix(outputShape);
-    
     Dshape out_tmpShape;
     initDshapeInt(&out_tmpShape,0,0,outputH,outputW);
     Matrix *out_tmp = creatZerosMatrix(out_tmpShape);
@@ -132,6 +146,7 @@ void Forward(CnnGateParam *p)
         for(int c = 0;c < channel_out;c++)
         {
             setZeros(out_tmp);
+            
             for(int inc=0;inc < channel_in;inc++)
             {
                 get2dim(p->input,input2D,n,inc);
@@ -147,14 +162,13 @@ void Forward(CnnGateParam *p)
     }
     ReluActivator_Forward(_output);
     p->_output = _output;
-    printf("%f\n",get_mempool_usage());
+    
     destroyMatrix(i_a);
     destroyMatrix(w_a);
     destroyMatrix(input2D);
     destroyMatrix(out_tmp);
     destroyMatrix(result);
     //MemoryPool_Clear();
-    printf("%f\n",get_mempool_usage());
     return ;
     
     

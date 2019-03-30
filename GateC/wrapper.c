@@ -40,22 +40,26 @@ static PyObject *py_PoolGate_backward(PyObject *self,PyObject * args)
     p.bz_y = pyArray2Matrix((PyArrayObject*)bz_y);
     PyArrayObject *result =  matrix2pyArray(PoolGate_Backward(&p));
     
+    destroyMatrix(p.input);
+    destroyMatrix(p._output);
+    destroyMatrix(p.dz);
+    destroyMatrix(p.bz_x);
+    destroyMatrix(p.bz_y);
     return (PyObject *)Py_BuildValue("O",result);
 }
 
 static PyObject *py_PoolGate(PyObject *self,PyObject * args)
 {
-    
     PyObject* p_object;
     PoolGateParam p;
     if(!PyArg_ParseTuple(args,"Oiis",&p_object,&(p.filter),&(p.strids),&(p.type)))
     {
         return NULL;
     }
-    printf("here4");
     p.input = pyArray2Matrix((PyArrayObject*)p_object);
     PoolGateParam *curp = &p;
     PyArrayObject *result =  matrix2pyArray(PoolGate_Forward(curp));
+    destroyMatrix(p.input);
     if(strcmp(p.type, "MAX") == 0)
     {
         PyArrayObject* bz_x = matrix2pyArray(curp->bz_x);
@@ -86,6 +90,12 @@ static PyObject *py_CnnGate_backward(PyObject *self,PyObject * args)
     PyArrayObject *dw =  matrix2pyArray(p.dw);
     PyArrayObject *dx =  matrix2pyArray(p.dx);
     PyArrayObject *dbias =  matrix2pyArray(p.dbias);
+    
+    destroyMatrix(p.input);
+    destroyMatrix(p._output);
+    destroyMatrix(p.weight);
+    destroyMatrix(p.bias);
+    destroyMatrix(p.dz);
     return (PyObject *)Py_BuildValue("OOO",dw,dbias,dx);
     
 }
@@ -107,16 +117,12 @@ static PyObject *py_CnnGate(PyObject *self,PyObject * args)
     curp->weight = pyArray2Matrix((PyArrayObject*)p_weight);
     curp->bias = pyArray2Matrix((PyArrayObject*)p_bias);
     curp->input = pyArray2Matrix((PyArrayObject*)p_object);
-    printf("here1");
     Forward(curp);
-    printf("here2");
     PyArrayObject *result =  matrix2pyArray(curp->_output);
-    //Py_DECREF(p_object);
-    //Py_DECREF(p_weight);
-    //Py_DECREF(p_bias);
-    printf("here3");
     PyObject *  t = (PyObject *)Py_BuildValue("O",result);
-    printf("here4");
+    destroyMatrix(curp->weight);
+    destroyMatrix(curp->bias);
+    destroyMatrix(curp->input);
     return t;
 }
 static PyObject *py_test(PyObject *self,PyObject * args)
@@ -130,9 +136,12 @@ static PyObject *py_test(PyObject *self,PyObject * args)
     }
     Matrix * test = pyArray2Matrix((PyArrayObject *)p_test);
     Matrix * test2 = pyArray2Matrix((PyArrayObject *)p_test2);
-    TanhActivator_Backward(test,test2);
-    PyArrayObject *result =  matrix2pyArray(test);
+    PyArrayObject *result =  matrix2pyArray(SoftmaxActivator_Backward(test,test2));
     
+    printf("%f\n",get_mempool_usage());
+    destroyMatrix(test);
+    destroyMatrix(test2);
+    printf("%f\n",get_mempool_usage());
     return (PyObject *)Py_BuildValue("O",result);
 }
 

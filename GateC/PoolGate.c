@@ -18,13 +18,14 @@ double calc_pool(Matrix *input,char * type,int index,int f,int c,Matrix * bz_x,M
     max = *(input->array);
     int y = input->dshape.shape[2];
     int z = input->dshape.shape[3];
-    int bx = bz_x->dshape.shape[1];
-    int by = bz_x->dshape.shape[2];
+    
     int bz = bz_x->dshape.shape[3];
+    int by = bz_x->dshape.shape[2] * bz;
+    //int bx = bz_x->dshape.shape[1] * by;
     int index2 = f * by + c * bz + index;
     for(int i=0;i< y;i++)
     {
-        for(int j = 1;j < z;j++)
+        for(int j = 0;j < z;j++)
         {
             tmp = *(input->array + i * z  + j);
             //getMatrixElem(input,0,0,i,j,&tmp);
@@ -57,21 +58,29 @@ Matrix* PoolGate_Backward(PoolGateParam *p)
     int outputW = getOutputSize(inputW,step,fliters,0);
     int outputH = getOutputSize(inputH,step,fliters,0);
     int index = 0;
+    int indexbz = 0;
+    int bz = p->bz_x->dshape.shape[3];
+    int by = p->bz_x->dshape.shape[2] * bz;
+    int bx = p->bz_x->dshape.shape[1] * by;
     for(int f =0;f<N;f++)
     {
         for(int c =0;c<channel;c++)
         {
             index = 0;
+            indexbz = f * by + c * bz;
             for(int h = 0;h < outputH;h++)
             {
                 for(int w = 0;w < outputW;w++)
                 {
-                    double tmp;
-                    getMatrixElem(p->bz_x,0,f,c,index,&tmp);
+                    
+                    double tmp = *(p->bz_x->array + indexbz + index);
+                    //getMatrixElem(p->bz_x,0,f,c,index,&tmp);
                     int xh = h * p->strids + (int)tmp;
-                    getMatrixElem(p->bz_y,0,f,c,index,&tmp);
+                    tmp = *(p->bz_y->array + indexbz + index);
+                    //getMatrixElem(p->bz_y,0,f,c,index,&tmp);
                     int xw = w * p->strids + (int)tmp;
                 
+                    //*(result->array + )
                     getMatrixElem(p->dz,f,c,h,w,&tmp);
                     modifyMatrixElem(result,f,c,xh,xw,tmp);
                     index ++;
