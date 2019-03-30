@@ -122,4 +122,5 @@ void setMatrixExp(Matrix *m);
 //每个值的负数
 void setMatrixSign(Matrix *m);
 void doWise(Matrix *m,double k,...);
+double getMatrixMax(Matrix *m,int dim0);
 #endif

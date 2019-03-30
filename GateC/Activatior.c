@@ -48,23 +48,25 @@ void TanhActivator_Backward(Matrix *dz,Matrix *output)
 }
 void SoftmaxActivator_Forward(Matrix *m)
 {
-    int n = m->dshape.shape[0];
-    int c = m->dshape.shape[1];
-    int h = m->dshape.shape[2];
-    int w = m->dshape.shape[3];
-    double sum;
-    for(int i = 0;i<n;i++)
+    int z = m->dshape.shape[3];
+    int y = m->dshape.shape[2] * z ;
+    int x = m->dshape.shape[1] * y;
+    int index = 0;
+    double sum=0,max=0,tmp;
+    for(int i = 0;i<m->dshape.shape[0];i++)
     {
-        sum = getMatrixSumbyDim(m,3,i,0);
-        for(int j = 0;j<c;j++)
+        max = getMatrixMax(m,i);
+        sum = 0;
+        index = i * x;
+        for(int j = 0;j<x;j++)
         {
-            for(int k = 0;k<h;k++)
-            {
-                for(int l = 0;l<w;l++)
-                {
-                    
-                }
-            }
+            tmp = exp(*(m->array + index + j) - max);
+            *(m->array + i * x + j) = tmp;
+            sum += tmp;
+        }
+        for(int j = 0;j<x;j++)
+        {
+            *(m->array + index + j) /= sum;
         }
     }
 }

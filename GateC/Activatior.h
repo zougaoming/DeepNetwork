@@ -17,4 +17,5 @@ void IdentityActivator_Forward(Matrix *m);
 void IdentityActivator_Backward(Matrix *dz,Matrix *output);
 void SigmoidActivator_Forward(Matrix *m);
 void SigmoidActivator_Backward(Matrix *dz,Matrix *output);
+void SoftmaxActivator_Forward(Matrix *m);
 #endif /* ReluActivatior_h */

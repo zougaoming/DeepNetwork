@@ -1692,6 +1692,40 @@ double getMatrixSum(Matrix *m){
     }
     return count;
 }
+double getMatrixMax(Matrix *m,int dim0)
+{
+    int z = m->dshape.shape[3];
+    int y = m->dshape.shape[2] * z ;
+    int x = m->dshape.shape[1] * y;
+    
+    int startindex = dim0 * x;
+    double max = *(m->array + startindex),tmp = 0;
+    //*indexi = 0;
+    //*indexj = 0;
+    int a = 0,b=0;
+    for(int i = 1;i<x;i++)
+    {
+        tmp = *(m->array + startindex + i);
+        if(tmp > max)
+        {
+            max = tmp;
+        }
+    }
+    /*
+    for(int i = 0;i<m->dshape.shape[1];i++)
+    {
+        a = i * y + dim0 * x;
+        for(int j=0;j< m->dshape.shape[2];j++)
+        {
+            b = a + j * z;
+            for(int k = 0;k < m->dshape.shape[3];k++)
+            {
+                
+            }
+        }
+    }*/
+    return max;
+}
 //求往后算ndim维度的和
 double getMatrixSumbyDim(Matrix *m,int ndim,int dim0,int dim1){
     if(ndim <= 0 || ndim >=4)
