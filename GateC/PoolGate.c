@@ -33,12 +33,18 @@ double calc_pool(Matrix *input,char * type,int index,int f,int c,Matrix * bz_x,M
             {
                 max = tmp;
                 *(bz_x->array + index2) = i;
-                *(bz_y->array + index2) = y;
+                *(bz_y->array + index2) = j;
                 //modifyMatrixElem(bz_x,0,f,c,index,i);
                 //modifyMatrixElem(bz_y,0,f,c,index,j);
             }
         }
     }
+    //printf("input->\n");
+    //printarray(input);
+    //printf("bz_x->\n");
+    //printarray(bz_x);
+    //printf("bz_y->\n");
+    //printarray(bz_y);
     return max;
 }
 
@@ -61,7 +67,7 @@ Matrix* PoolGate_Backward(PoolGateParam *p)
     int indexbz = 0;
     int bz = p->bz_x->dshape.shape[3];
     int by = p->bz_x->dshape.shape[2] * bz;
-    int bx = p->bz_x->dshape.shape[1] * by;
+    //int bx = p->bz_x->dshape.shape[1] * by;
     for(int f =0;f<N;f++)
     {
         for(int c =0;c<channel;c++)

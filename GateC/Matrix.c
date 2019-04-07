@@ -15,7 +15,6 @@
 
 //从连续的数据创建数组,浅拷贝
 Matrix *creatAsMatrixFromDatas(double *data,int data_len, Dshape dshape){
-    int i = 0;
     if(!data) return NULL;
     Matrix *m = (Matrix *)MemoryPool_Alloc(sizeof(Matrix));
     if(!m) return NULL;
@@ -51,7 +50,7 @@ Matrix *creatMatrixFromDatas(double *data,int data_len, Dshape dshape){
 
 //创建单值数组
 Matrix *creatMatrixFromValue(double value, Dshape dshape){
-    int i = 0,w,x,y,z,data_len;
+    int i = 0,w,x,y,z,data_len=0;
     z = dshape.shape[3];
     y = dshape.shape[2] * z;
     x = dshape.shape[1] * y;
@@ -83,7 +82,7 @@ Matrix *creatMatrixFromValue(double value, Dshape dshape){
 
 //指定步长，创建等间隔值的数组
 Matrix *creatMatrixFromArange(double startVal, double stepVal,Dshape dshape){
-    int i = 0,w,x,y,z,data_len;
+    int i = 0,w,x,y,z,data_len=0;
     z = dshape.shape[3];
     y = dshape.shape[2] * z;
     x = dshape.shape[1] * y;
@@ -115,7 +114,7 @@ Matrix *creatMatrixFromArange(double startVal, double stepVal,Dshape dshape){
 
 //指定范围之间的均匀间隔数量，创建等间隔值的数组
 Matrix *creatMatrixFromLinspace(double startVal, double endVal,Dshape dshape){
-    int i = 0,w,x,y,z,data_len;
+    int i = 0,w,x,y,z,data_len=0;
     double stepVal;
     z = dshape.shape[3];
     y = dshape.shape[2] * z;
@@ -1052,7 +1051,7 @@ Matrix *addSecondOrderMatrixs(Matrix *m1,Matrix *m2){
     for(i=0;i<resultm->length;i++){
         *(resultm->array + i) = *(m1->array + i) + *(m2->array + i);
     }
-    initDshape(resultm->dshape.shape, m1->dshape.shape);
+    initDshape(&resultm->dshape, m1->dshape.shape);
     return resultm;
 }
 //两个数组相加，m1,m2的维数必须相同(支持4维)
@@ -1069,7 +1068,7 @@ void addSecondOrderMatrixsby2d(Matrix *m1,Matrix *m2,int dim0,int dim1){
     Dshape dshape=m1->dshape;
     if(dshape.shape[2] != m2->dshape.shape[2]
        || dshape.shape[3] != m2->dshape.shape[3]){printf("here   m1.ndim2 != m2.ndim2");return ;}
-    int w,x,y,z,tmp;
+    int x,y,z,tmp;
     z = dshape.shape[3];
     y = dshape.shape[2] * z;
     x = dshape.shape[1] * y;
@@ -1112,8 +1111,17 @@ Matrix *subSecondOrderMatrixs(Matrix *m1,Matrix *m2){
     for(i=0;i<resultm->length;i++){
         *(resultm->array + i) = *(m1->array + i) - *(m2->array + i);
     }
-    initDshape(resultm->dshape.shape, m1->dshape.shape);
+    initDshape(&resultm->dshape, m1->dshape.shape);
     return resultm;
+}
+//两个数组相减，m1-m2，m1,m2的维数必须相同(支持4维)
+void subSecondOrderMatrixs2(Matrix *m1,Matrix *m2)
+{
+    int i = 0;
+    if(compareMatrix_Shape(m1,m2) == 0){printf("m1.ndim != m2.ndim");return ;};
+    for(i=0;i<m1->length;i++){
+        *((double*)m1->array + i) -= *((double*)m2->array + i);
+    }
 }
 
 //两个数组点积,对应元素相乘,m1,m2的维数必须相同(支持4维度)
@@ -1133,7 +1141,7 @@ Matrix *dotSecondOrderMatrixs(Matrix *m1,Matrix *m2)
     for(i=0;i<resultm->length;i++){
         *(resultm->array + i) = *(m1->array + i) * *(m2->array + i);
     }
-    initDshape(resultm->dshape.shape, m1->dshape.shape);
+    initDshape(&resultm->dshape, m1->dshape.shape);
     return resultm;
 }
 //两个数组点积,对应元素相乘,m1,m2的维数必须相同(支持4维度),不分配内存，保存到m1
@@ -1200,11 +1208,13 @@ Matrix *mulSecondOrderMatrixs(Matrix *m1,Matrix *m2){
     }
     resultm->dshape.shape[0] = 0;
     resultm->dshape.shape[1] = 0;
+    resultm->dshape.shape[2] = m1->dshape.shape[2];
+    /*
     if(m2->dshape.shape[2] == 1) m2->dshape.shape[2] = 0;
     if(m1->dshape.shape[2] == 1){
         m1->dshape.shape[2] = 0;
         resultm->dshape.shape[2] = 0;
-    }
+    }*/
     resultm->dshape.shape[3] = m2->dshape.shape[3];
     return resultm;
 }
@@ -1700,9 +1710,6 @@ double getMatrixMax(Matrix *m,int dim0)
     
     int startindex = dim0 * x;
     double max = *(m->array + startindex),tmp = 0;
-    //*indexi = 0;
-    //*indexj = 0;
-    int a = 0,b=0;
     for(int i = 1;i<x;i++)
     {
         tmp = *(m->array + startindex + i);
@@ -1711,19 +1718,6 @@ double getMatrixMax(Matrix *m,int dim0)
             max = tmp;
         }
     }
-    /*
-    for(int i = 0;i<m->dshape.shape[1];i++)
-    {
-        a = i * y + dim0 * x;
-        for(int j=0;j< m->dshape.shape[2];j++)
-        {
-            b = a + j * z;
-            for(int k = 0;k < m->dshape.shape[3];k++)
-            {
-                
-            }
-        }
-    }*/
     return max;
 }
 //求往后算ndim维度的和
@@ -1848,7 +1842,6 @@ void doWise(Matrix *m,double k,...)
 {
     if(!m)return;
     va_list argp;
-    double tmp;
     for(int i=0;i<m->length;i++)
     {
         va_start(argp, k);

@@ -38,7 +38,7 @@ int isExits(char* name)
         if(name && strcmp(name, cur->name) == 0)
         {
             //printf("hasFind");
-            return cur;
+            return 1;
         }
         oldLink = cur;
         cur = cur->next;

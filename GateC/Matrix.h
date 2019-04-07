@@ -92,6 +92,7 @@ Matrix *addSecondOrderMatrixs(Matrix *m1,Matrix *m2);
 void addSecondOrderMatrixs2(Matrix *m1,Matrix *m2);//不重新申请内存，直接保存到M1中。
 void addSecondOrderMatrixsby2d(Matrix *m1,Matrix *m2,int dim0,int dim1);//增加到最后两维
 Matrix *subSecondOrderMatrixs(Matrix *m1,Matrix *m2);
+void subSecondOrderMatrixs2(Matrix *m1,Matrix *m2);
 Matrix *dotSecondOrderMatrixs(Matrix *m1,Matrix *m2);
 void dotSecondOrderMatrixs2(Matrix *m1,Matrix *m2);//两个数组点积,对应元素相乘,m1,m2的维数必须相同(支持4维度),不分配内存，保存到m1
 Matrix *mulSecondOrderMatrixs(Matrix *m1,Matrix *m2);

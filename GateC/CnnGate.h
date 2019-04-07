@@ -28,7 +28,8 @@ typedef struct CnnGateParamS{
      int N;
      int channel_in;
      int channel_out;
-    ParamLink * link;
+    Activator_Forward forward;
+    Activator_Backward backward;
 }CnnGateParam;
 //void CnnGate(CnnGateParam *p);
 void Forward(CnnGateParam *p);
