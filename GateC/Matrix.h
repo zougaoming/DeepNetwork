@@ -48,8 +48,9 @@ void get2dim(Matrix *m,Matrix *mto,int dimen0,int dimen1);
 int PandingMatrix4D(Matrix *m,unsigned zeropanding);
 int setZeros(Matrix *m);
 void getSecondOrderSubMatrix2(Matrix *m,Matrix* mto,int startRow,int startColume);
+void getSecondOrderSubMatrix4d(Matrix *m,Matrix* mto,int dim0,int dim1,int startRow,int startColume);
 double getSecondOrderMatrixTrace(Matrix *m);
-int getMatrixElem(Matrix *m,int dimen0,int dimen1,int dimen2,int dimen3,double *elem);
+double getMatrixElem(Matrix *m,int dimen0,int dimen1,int dimen2,int dimen3);
 int modifyMatrixElem(Matrix *m,int dimen0,int dimen1,int dimen2,int dimen3,double elem);
 Matrix *copyMatrix(Matrix *m);
 //比较两个数组的维度是否一致
@@ -124,4 +125,10 @@ void setMatrixExp(Matrix *m);
 void setMatrixSign(Matrix *m);
 void doWise(Matrix *m,double k,...);
 double getMatrixMax(Matrix *m,int dim0);
+
+//获取维度的长度
+int getIndexMaterx(Matrix *m,int dim);
+//获取指定下表的指针偏差
+int getDiffPointerMaterx(Matrix *m,int dim0,int dim1,int dim2,int dim3);
+
 #endif

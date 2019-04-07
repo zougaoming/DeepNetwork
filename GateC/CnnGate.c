@@ -83,13 +83,8 @@ void Conv4D(Matrix *input,Matrix *weight,Matrix *i_a,Matrix* result,int outputH,
 
 void Backward(CnnGateParam *p)
 {
-    //Activator_Backward Func = dlsym(RTLD_DEFAULT,"ReluActivator_Backward");
-    //Activator_Backward backward = getBackward(p->activeFunc);
+
     p->backward(p->dz,p->_output);
-    //pActivatorFuncLink activeFunc = getActivator(p->activeFunc);
-    //activeFunc->backward(p->dz,p->_output);
-    //ReluActivator_Backward(p->dz,p->_output);
-    //printarray(p->dz);
     p->dw = zeros_like(p->weight);
     p->dbias = zeros_like(p->bias);
     p->dx = zeros_like(p->input);
@@ -106,10 +101,7 @@ void Backward(CnnGateParam *p)
     int outputW = getOutputSize(inputW,p->strids,fliter,p->panding);
     int outputH = getOutputSize(inputH,p->strids,fliter,p->panding);
     
-    //Dshape panded_shape;
-    //initDshapeInt(&panded_shape, 0, 0, padded_delta->dshape.shape[2], padded_delta->dshape.shape[3]);
-    //Matrix *panded_convw = creatMatrixFromValue(0, panded_shape);
-    
+
     Dshape out_tmpShape;
     initDshapeInt(&out_tmpShape,0,0,outputH,outputW);
     //Matrix *out_tmp = creatZerosMatrix(out_tmpShape);
@@ -129,18 +121,12 @@ void Backward(CnnGateParam *p)
         {
             for(int outc = 0;outc < channel_out;outc++)
             {
-                //get2dim(p->input,input2D,n,inc);
-                //get2dim(p->dz,out_tmp,n,outc);
-                //Conv(input2D,out_tmp,out_tmp2,result,fliter,fliter,p->strids);
-                //printarray(result);
+
                 Conv4D(p->input, p->dz,out_tmp2,result,fliter,fliter,p->strids,n,inc,n,outc);
-                //printarray(result);
                 addSecondOrderMatrixsby2d(p->dw,result,outc,inc);
 
                 get2dim(p->weight,w_a,outc,inc);
                 rot90Matrix(w_a,2);
-                //get2dim(padded_delta,panded_convw,n,outc);//out_tmp  的大小，应该加上PANDING
-                //Conv(panded_convw, w_a,w_a2,result2, inputH,inputW,p->strids);
                 Conv4D(padded_delta, w_a,w_a2,result2, inputH,inputW,p->strids,n,outc,0,0);
                 addSecondOrderMatrixsby2d(p->dx,result2,n,inc);
 
@@ -149,16 +135,13 @@ void Backward(CnnGateParam *p)
         for(int outc = 0;outc < channel_out;outc++)
         {
             double dbias;
-            getMatrixElem(p->dbias, 0, 0, 0, outc, &dbias);
+            dbias = getMatrixElem(p->dbias, 0, 0, 0, outc);
             dbias += getMatrixSumbyDim(p->dz,2,n,outc);
             modifyMatrixElem(p->dbias, 0, 0, 0, outc, dbias);
         }
     }
-    //destroyMatrix(panded_convw);
     destroyMatrix(padded_delta);
-    //destroyMatrix(out_tmp);
     destroyMatrix(out_tmp2);
-    //destroyMatrix(input2D);
     destroyMatrix(result);
     destroyMatrix(result2);
     destroyMatrix(w_a);
@@ -185,64 +168,31 @@ void Forward(CnnGateParam *p)
     initDshapeInt(&out_tmpShape,0,0,outputH,outputW);
     Matrix *out_tmp = creatZerosMatrix(out_tmpShape);
     Matrix *result = copyMatrix(out_tmp);
-    //Dshape input2Dshape;
-    //initDshapeInt(&input2Dshape, 0, 0,inputH + 2*p->panding,inputW + 2*p->panding);
-    //Matrix *input2D = creatMatrixFromValue(0, input2Dshape);
+
     Dshape flitershape;
     initDshapeInt(&flitershape, 0, 0,fliter,fliter);
-    //Matrix *w_a = creatMatrixFromValue(0, flitershape);
     Matrix *i_a = creatMatrixFromValue(0, flitershape);
     for(int n = 0;n< N;n++)
     {
         for(int c = 0;c < channel_out;c++)
         {
             setZeros(out_tmp);
-            
             for(int inc=0;inc < channel_in;inc++)
             {
-                //get2dim(p->input,input2D,n,inc);
-                //get2dim(p->weight,w_a,c,inc);
-                //Conv(input2D, w_a,i_a,result, outputH,outputW,p->strids);
                 Conv4D(p->input, p->weight,i_a,result, outputH,outputW,p->strids,n,inc,c,inc);
                 addSecondOrderMatrixs2(out_tmp,result);
             }
-            double b;
-            getMatrixElem(p->bias, 0, 0, 0, c, &b);
-            kAddMatrix(out_tmp, b);
+            kAddMatrix(out_tmp, getMatrixElem(p->bias, 0, 0, 0, c));
             setMatrixArray(_output,out_tmp,n,c);
         }
     }
-    //Activator_Forward Func = dlsym(RTLD_DEFAULT,"ReluActivator_Forward");
-    //Activator_Forward forward = getForward(p->activeFunc);
     p->forward(_output);
-    
-    //pActivatorFuncLink activeFunc = getActivator(p->activeFunc);
-    //activeFunc->forward(_output);
-    
-    //ReluActivator_Forward(_output);
     p->_output = _output;
     
     destroyMatrix(i_a);
-    //destroyMatrix(w_a);
-    //destroyMatrix(input2D);
     destroyMatrix(out_tmp);
     destroyMatrix(result);
-    //MemoryPool_Clear();
     return ;
     
     
 }
-/*
-void CnnGate(CnnGateParam *p)
-{
-    if(p->isBackward == 1)
-    {
-        Backward(p);
-    }
-    else
-    {
-        //PoolGate *newp;
-        Forward(p);
-    }
-}
-*/

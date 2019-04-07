@@ -260,6 +260,33 @@ void printShape(Matrix *m){
     printf(")\n");
 }
 
+//获取维度的长度
+int getIndexMaterx(Matrix *m,int dim)
+{
+    switch (dim) {
+        case 3:
+            return m->dshape.shape[3];
+            break;
+        case 2:
+            return m->dshape.shape[2] * m->dshape.shape[3];
+            break;
+        case 1:
+            return m->dshape.shape[1] * m->dshape.shape[2] * m->dshape.shape[3];
+            break;
+        case 0:
+            return  m->dshape.shape[0] * m->dshape.shape[1] * m->dshape.shape[2] * m->dshape.shape[3];
+            break;
+        default:
+            return 0;
+            break;
+    }
+}
+//获取指定下表的指针偏差
+int getDiffPointerMaterx(Matrix *m,int dim0,int dim1,int dim2,int dim3)
+{
+    return dim0 * m->dshape.shape[1] * m->dshape.shape[2] * m->dshape.shape[3] + dim1* m->dshape.shape[2] * m->dshape.shape[3] + dim2* m->dshape.shape[3] + dim3;
+}
+
 //获得数组的维数，最多4维
 int getMatrixNdim(Matrix *m){
     int i,ndim = 0;
@@ -443,41 +470,13 @@ int PandingMatrix4D(Matrix *m,unsigned zeropanding)
 }
 
 //获得数组的元素
-int getMatrixElem(Matrix *m,int dimen0,int dimen1,int dimen2,int dimen3,double *elem){
-    int w,x,y,z,index;
-    if(!m) return -1;
-    if((dimen0 != 0 && m->dshape.shape[0] == 0) ||
-       (dimen1 != 0 && m->dshape.shape[1] == 0)) return -1;
-    if((dimen2 != 0 && m->dshape.shape[2] == 0) ||
-       dimen3 >= m->dshape.shape[3]) return -1;
-    if(dimen0 > m->dshape.shape[0] || dimen1 > m->dshape.shape[1] ||
-       dimen2 > m->dshape.shape[2]) return -1;
-    if(dimen0 < 0 || dimen1 < 0 || dimen2 < 0 || dimen3 < 0)return -1;
-    z = m->dshape.shape[3];
-    y = m->dshape.shape[2] * z;
-    x = m->dshape.shape[1] * y;
-    w = m->dshape.shape[0] * x;
-    index = dimen0*x + dimen1*y + dimen2*z + dimen3;
-    *elem = *(m->array + index);
-    return 0;
+double getMatrixElem(Matrix *m,int dimen0,int dimen1,int dimen2,int dimen3){
+    return *(m->array + getDiffPointerMaterx(m, dimen0, dimen1, dimen2, dimen3));
 }
 
 int modifyMatrixElem(Matrix *m,int dimen0,int dimen1,int dimen2,int dimen3,double elem){
-    int w,x,y,z,index;
-    if(!m) return -1;
-    if((dimen0 != 0 && m->dshape.shape[0] == 0) ||
-       (dimen1 != 0 && m->dshape.shape[1] == 0)) return -1;
-    if((dimen2 != 0 && m->dshape.shape[2] == 0) ||
-       dimen3 >= m->dshape.shape[3]) return -1;
-    if(dimen0 > m->dshape.shape[0] || dimen1 > m->dshape.shape[1] ||
-       dimen2 > m->dshape.shape[2]) return -1;
-    if(dimen0 < 0 || dimen1 < 0 || dimen2 < 0 || dimen3 < 0)return -1;
-    z = m->dshape.shape[3];
-    y = m->dshape.shape[2] * z;
-    x = m->dshape.shape[1] * y;
-    w = m->dshape.shape[0] * x;
-    index = dimen0*x + dimen1*y + dimen2*z + dimen3;
-    *(m->array + index) = elem;
+    
+    *(m->array + getDiffPointerMaterx(m, dimen0, dimen1, dimen2, dimen3)) = elem;
     return 0;
 }
 //第二个数组赋值到第一个数组的最后二维
@@ -652,13 +651,27 @@ Matrix * getSecondOrderSubMatrix(Matrix *m,int startRow,int startColume,int endR
     return m2;
 }
 
+
 void getSecondOrderSubMatrix2(Matrix *m,Matrix* mto,int startRow,int startColume){
     //printf("startrow=%d,startcol=%d",startRow,startColume);
     int starti = startColume+startRow * (m->dshape.shape[3]);
     int z = mto->dshape.shape[3];
     for(int i=0;i<mto->dshape.shape[2];i++){
         for(int j=0;j<mto->dshape.shape[3];j++){
-            *(double*)((double*)mto->array+i*z+j) = *(double*)((double*)m->array + starti + i*m->dshape.shape[3]+j);
+            *(mto->array+i*z+j) = *(m->array + starti + i*m->dshape.shape[3]+j);
+            //printf("i=%d,j=%d,a=%d,b=%d\n",i,j,i*z + j,starti);
+        }
+    }
+}
+void getSecondOrderSubMatrix4d(Matrix *m,Matrix* mto,int dim0,int dim1,int startRow,int startColume)
+{
+    //printf("startrow=%d,startcol=%d",startRow,startColume);
+    int starti_m = getDiffPointerMaterx(m, dim0, dim1, startRow, startColume);// startColume+startRow * (m->dshape.shape[3]);
+    //int starti_mto = getDiffPointerMaterx(mto, dim0, dim1, startRow, startColume);
+    int z = mto->dshape.shape[3];
+    for(int i=0;i<mto->dshape.shape[2];i++){
+        for(int j=0;j<mto->dshape.shape[3];j++){
+            *(mto->array+i*z+j) = *(m->array + starti_m + i*m->dshape.shape[3]+j);
             //printf("i=%d,j=%d,a=%d,b=%d\n",i,j,i*z + j,starti);
         }
     }
